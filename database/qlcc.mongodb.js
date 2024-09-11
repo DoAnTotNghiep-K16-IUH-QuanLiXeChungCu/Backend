@@ -18,6 +18,51 @@ db.createCollection("exit_records");
 db.createCollection("vehicles");
 // Tạo bảng customers
 db.createCollection("customers");
+// Tạo bảng users
+db.createCollection("users");
+// Tạo bảng roles
+db.createCollection("roles");
+// Tạo bảng user_roles
+db.createCollection("user_roles");
+
+db.users.insertMany([
+  {
+    _id: ObjectId("69aae4843ae33121e0de8501"),
+    name: "Admin",
+    username: "TuanKiet",
+    name: "Kiet271002@",
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8502"),
+    name: "Admin",
+    username: "ThienDat",
+    name: "ThienDat@",
+  }
+]);
+
+db.roles.insertMany([
+  {
+    _id: ObjectId("70aae4843ae33121e0de8501"),
+    name: "Admin",
+  },
+  {
+    _id: ObjectId("70aae4843ae33121e0de8502"),
+    name: "user",
+  },
+]);
+
+db.user_roles.insertMany([
+  {
+    _id: ObjectId("71aae4843ae33121e0de8501"),
+    userId: ObjectId("69aae4843ae33121e0de8501"),
+    roleId: ObjectId("70aae4843ae33121e0de8501"),
+  },
+  {
+    _id: ObjectId("71aae4843ae33121e0de8502"),
+    userId: ObjectId("69aae4843ae33121e0de8502"),
+    roleId: ObjectId("70aae4843ae33121e0de8501"),
+  },
+]);
 
 db.apartments.insertMany([
   {
@@ -747,3 +792,5 @@ db.visitor_history_moneys.insertMany([
     isDelete: false,
   }
 ]);
+
+
