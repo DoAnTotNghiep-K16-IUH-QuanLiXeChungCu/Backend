@@ -11,6 +11,9 @@ const ip = process.env.IP;
 const port = process.env.PORT;
 const mongodb = process.env.MONGODB_URI;
 
+// routes
+const userRoute = require("./routes/userRoute");
+
 // middleware
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
@@ -27,7 +30,7 @@ mongoose
     console.error("Connection failed:", error);
   });
 // routes
-// app.use("/api/v1/users", userRoute);
+app.use("/api/v1/users", userRoute);
 // app.use("/api/v1/conversation", conversationRoute);
 // app.use("/api/v1/posts", postRoute);
 // app.use("/api/v1/auth", authRoute);

@@ -20,48 +20,84 @@ db.createCollection("vehicles");
 db.createCollection("customers");
 // Tạo bảng users
 db.createCollection("users");
-// Tạo bảng roles
-db.createCollection("roles");
-// Tạo bảng user_roles
-db.createCollection("user_roles");
+// Tạo bảng users_shift
+db.createCollection("users_shift");
+// Tạo bảng shift
+db.createCollection("shift");
 
 db.users.insertMany([
   {
     _id: ObjectId("69aae4843ae33121e0de8501"),
-    name: "Admin",
+    role: "Admin",
     username: "TuanKiet",
     name: "Kiet271002@",
+    age: 22,
+    address: "Binh Thuan",
+    phoneNumber: "0123456788",
   },
   {
     _id: ObjectId("69aae4843ae33121e0de8502"),
-    name: "Admin",
+    role: "Admin",
     username: "ThienDat",
     name: "ThienDat@",
+    age: 22,
+    address: "Dong Nai",
+    phoneNumber: "0123456789",
   }
 ]);
 
-db.roles.insertMany([
+db.shift.insertMany([
   {
-    _id: ObjectId("70aae4843ae33121e0de8501"),
-    name: "Admin",
+    _id: ObjectId("69aae9843ae33121e0de8501"),
+    shiftName: "Sang",
+    startTime: "05:00",
+    endTime: "12:00",
   },
   {
-    _id: ObjectId("70aae4843ae33121e0de8502"),
-    name: "user",
+    _id: ObjectId("69aae9843ae33121e0de8502"),
+    shiftName: "Chieu",
+    startTime: "12:00",
+    endTime: "17:00",
+  },
+  {
+    _id: ObjectId("69aae9843ae33121e0de8503"),
+    shiftName: "Toi",
+    startTime: "17:00",
+    endTime: "22:00",
+  },
+  {
+    _id: ObjectId("69aae9843ae33121e0de8504"),
+    shiftName: "Dem",
+    startTime: "22:00",
+    endTime: "05:00",
   },
 ]);
 
-db.user_roles.insertMany([
+db.users_shift.insertMany([
   {
-    _id: ObjectId("71aae4843ae33121e0de8501"),
-    userId: ObjectId("69aae4843ae33121e0de8501"),
-    roleId: ObjectId("70aae4843ae33121e0de8501"),
-  },
-  {
-    _id: ObjectId("71aae4843ae33121e0de8502"),
+    _id: ObjectId("69aae9843ae33121e0de8541"),
     userId: ObjectId("69aae4843ae33121e0de8502"),
-    roleId: ObjectId("70aae4843ae33121e0de8501"),
+    shiftId: ObjectId("69aae9843ae33121e0de8501"),
+    dateTime:   ISODate("2024-01-01"),
   },
+  {
+    _id: ObjectId("69aae9843ae33121e0de8532"),
+    userId: ObjectId("69aae4843ae33121e0de8501"),
+    shiftId : ObjectId("69aae9843ae33121e0de8502"),
+    dateTime:   ISODate("2024-01-01"),
+  },
+  {
+    _id: ObjectId("69aae9843ae33121e0de8523"),
+    userId: ObjectId("69aae4843ae33121e0de8501"),
+    shiftId: ObjectId("69aae9843ae33121e0de8503"),
+    dateTime:   ISODate("2024-01-01"),
+  },
+  {
+    _id: ObjectId("69aae9843ae33121e0de8514"),
+    userId: ObjectId("69aae4843ae33121e0de8502"),
+    shiftId: ObjectId("69aae9843ae33121e0de8504"),
+    dateTime:   ISODate("2024-01-01"),
+  }
 ]);
 
 db.apartments.insertMany([
@@ -378,7 +414,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8501"),
     monthlyFee: 500000,
     startDate: ISODate("2024-01-01"),
-    endtDate: ISODate("2024-02-01"),
+    endDate: ISODate("2024-02-01"),
     isDelete: false,
   },
   {
@@ -387,7 +423,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8505"), //motor
     monthlyFee: 150000,
     startDate: ISODate("2024-02-01"),
-    endtDate: ISODate("2024-03-01"),
+    endDate: ISODate("2024-03-01"),
     isDelete: false,
   },
   {
@@ -396,7 +432,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8503"), //car
     monthlyFee: 500000,
     startDate: ISODate("2024-01-01"),
-    endtDate: ISODate("2024-02-01"),
+    endDate: ISODate("2024-02-01"),
     isDelete: false,
   },
   {
@@ -405,7 +441,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8506"),   //motor
     monthlyFee: 150000,
     startDate: ISODate("2024-01-01"),
-    endtDate: ISODate("2024-02-01"),
+    endDate: ISODate("2024-02-01"),
     isDelete: false,
   },
   {
@@ -414,7 +450,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8504"), //car
     monthlyFee: 500000,
     startDate: ISODate("2024-02-01"),
-    endtDate: ISODate("2024-03-01"),
+    endDate: ISODate("2024-03-01"),
     isDelete: false,
   },
   {
@@ -423,7 +459,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8504"),   //car 
     monthlyFee: 500000,
     startDate: ISODate("2024-02-01"),
-    endtDate: ISODate("2024-03-01"),
+    endDate: ISODate("2024-03-01"),
     isDelete: false,
   },
   {
@@ -432,7 +468,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8504"), //car
     monthlyFee: 500000,
     startDate: ISODate("2024-01-01"),
-    endtDate: ISODate("2024-02-01"),
+    endDate: ISODate("2024-02-01"),
     isDelete: false,
   },
   {
@@ -441,7 +477,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8507"), //motor
     monthlyFee: 150000,
     startDate: ISODate("2024-02-01"),
-    endtDate: ISODate("2024-03-01"),
+    endDate: ISODate("2024-03-01"),
     isDelete: false,
   },
   {
@@ -450,7 +486,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8504"), //car
     monthlyFee: 500000,
     startDate: ISODate("2024-01-01"),
-    endtDate: ISODate("2024-02-01"),
+    endDate: ISODate("2024-02-01"),
     isDelete: false,
   },
   {
@@ -459,7 +495,7 @@ db.resident_history_moneys.insertMany([
     parking_slotId: ObjectId("61aae4843a444431e0de8507"), //motor
     monthlyFee: 150000,
     startDate: ISODate("2024-02-01"),
-    endtDate: ISODate("2024-03-01"),
+    endDate: ISODate("2024-03-01"),
     isDelete: false,
   }
 ]);
@@ -474,6 +510,7 @@ db.entry_records.insertMany([
     isResident: true,
     vehicleType: "car",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
     isDelete: false,
   },
   {
@@ -485,6 +522,7 @@ db.entry_records.insertMany([
     isResident: true,
     vehicleType: "motor",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
     isDelete: false,
   },
   {
@@ -496,6 +534,7 @@ db.entry_records.insertMany([
     isResident: false,
     vehicleType: "car",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8523"),
     isDelete: false,
   },
   {
@@ -507,6 +546,7 @@ db.entry_records.insertMany([
     isResident: false,
     vehicleType: "motor",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8514"),
     isDelete: false,
   },
   {
@@ -518,6 +558,7 @@ db.entry_records.insertMany([
     isResident: true,
     vehicleType: "car",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
     isDelete: false,
   },
   {
@@ -529,6 +570,7 @@ db.entry_records.insertMany([
     isResident: true,
     vehicleType: "car",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
     isDelete: false,
   },
   {
@@ -540,6 +582,7 @@ db.entry_records.insertMany([
     isResident: false,
     vehicleType: "car",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8523"),
     isDelete: false,
   },
   {
@@ -551,6 +594,7 @@ db.entry_records.insertMany([
     isResident: false,
     vehicleType: "motor",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8514"),
     isDelete: false,
   },
   {
@@ -562,6 +606,7 @@ db.entry_records.insertMany([
     isResident: true,
     vehicleType: "car",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
     isDelete: false,
   },
   {
@@ -573,6 +618,7 @@ db.entry_records.insertMany([
     isResident: true,
     vehicleType: "motor",
     isOut: true,
+    users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
     isDelete: false,
   }
 ]);
@@ -698,7 +744,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T08:00:00.000Z"),
     hourly: 6,
     vehicleType: "car",
-    money: 50000,
+    parkingFee: 50000,
     isDelete: false,
   },
   {
@@ -708,7 +754,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T09:00:00.000Z"),
     hourly: 12,
     vehicleType: "motor",
-    money: 7000,
+    parkingFee: 7000,
     isDelete: false,
   },
   {
@@ -718,7 +764,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T10:00:00.000Z"),
     hourly: 24,
     vehicleType: "car",
-    money: 140000,
+    parkingFee: 140000,
     isDelete: false,
   },
   {
@@ -728,7 +774,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T11:00:00.000Z"),
     hourly: 6,
     vehicleType: "motor",
-    money: 5000,
+    parkingFee: 5000,
     isDelete: false,
   },
   {
@@ -738,7 +784,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T12:00:00.000Z"),
     hourly: 12,
     vehicleType: "car",
-    money: 80000,
+    parkingFee: 80000,
     isDelete: false,
   },
   {
@@ -748,7 +794,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T13:00:00.000Z"),
     hourly: 24,
     vehicleType: "motor",
-    money: 10000,
+    parkingFee: 10000,
     isDelete: false,
   },
   {
@@ -758,7 +804,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T14:00:00.000Z"),
     hourly: 6,
     vehicleType: "car",
-    money: 50000,
+    parkingFee: 50000,
     isDelete: false,
   },
   {
@@ -768,7 +814,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T15:00:00.000Z"),
     hourly: 12,
     vehicleType: "motor",
-    money: 7000,
+    parkingFee: 7000,
     isDelete: false,
   },
   {
@@ -778,7 +824,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T16:00:00.000Z"),
     hourly: 24,
     vehicleType: "car",
-    money: 160000,
+    parkingFee: 160000,
     isDelete: false,
   },
   {
@@ -788,7 +834,7 @@ db.visitor_history_moneys.insertMany([
     dateTime: ISODate("2024-01-01T17:00:00.000Z"),
     hourly: 6,
     vehicleType: "motor",
-    money: 5000,
+    parkingFee: 5000,
     isDelete: false,
   }
 ]);
