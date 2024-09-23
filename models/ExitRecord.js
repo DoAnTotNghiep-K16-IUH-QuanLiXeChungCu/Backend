@@ -1,8 +1,13 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const entryRecordSchema = new Schema({
-  entryTime: {
+const exitRecordSchema = new Schema({
+  entry_recordId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'EntryRecord',
+    required: true
+  },
+  exitTime: {
     type: Date,
     required: true
   },
@@ -26,22 +31,13 @@ const entryRecordSchema = new Schema({
     type: String,
     required: true
   },
-  isOut: {
-    type: Boolean,
-    required: true
-  },
-  users_shiftId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'UserShift',
-    required: true
-  },
   isDelete: {
     type: Boolean,
     default: false
   }
 }, {
-  collection: 'entry_records'
+  collection: 'exit_records'
 });
 
-const EntryRecord = mongoose.model('EntryRecord', entryRecordSchema);
-module.exports = EntryRecord;
+const ExitRecord = mongoose.model('ExitRecord', exitRecordSchema);
+module.exports = ExitRecord;
