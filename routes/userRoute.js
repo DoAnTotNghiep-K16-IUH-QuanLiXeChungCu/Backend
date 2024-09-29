@@ -1,12 +1,12 @@
 const { Router } = require("express");
-const userController = require("../controllers/userController");
+const UserController = require("../controllers/UserController");
 const router = Router();
 // API //
 // http://localhost:3000/api/v1/users/login
-router.post("/login", userController.login);
+router.post("/login", UserController.login);
 
 // http://localhost:3000/api/v1/users/sinup
-router.post("/sinup", userController.signup);
+router.post("/sinup", UserController.signup);
 
 
 // API 

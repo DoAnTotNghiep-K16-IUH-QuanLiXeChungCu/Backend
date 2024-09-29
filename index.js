@@ -12,9 +12,12 @@ const port = process.env.PORT;
 const mongodb = process.env.MONGODB_URI;
 
 // routes
-const userRoute = require("./routes/userRoute");
+const UserRoute = require("./routes/UserRoute");
 const EntryRecordRoute = require("./routes/EntryRecordRoute");
 const ExitRecordRoute = require("./routes/ExitRecordRoute");
+const CustomerRoute = require("./routes/CustomerRoute");
+const VehicleRoute = require("./routes/VehicleRoute");
+const ParkingSlotRoute = require("./routes/ParkingSlotRoute");
 
 // middleware
 app.use(express.static(path.join(__dirname, "public")));
@@ -32,13 +35,13 @@ mongoose
     console.error("Connection failed:", error);
   });
 // routes
-app.use("/api/v1/users", userRoute);
+app.use("/api/v1/users", UserRoute);
 app.use("/api/v1/entryRecord", EntryRecordRoute);
 app.use("/api/v1/exitRecord", ExitRecordRoute);
-// app.use("/api/v1/posts", postRoute);
-// app.use("/api/v1/auth", authRoute);
-// app.use("/api/v1/messages", postMessageRoute);
-// app.use("/api/v1/member", memberRoute);
+app.use("/api/v1/customer", CustomerRoute);
+app.use("/api/v1/vehicle", VehicleRoute);
+app.use("/api/v1/parkingSlot", ParkingSlotRoute);
+
 app.use(function (req, res) {
   res.status(404).send("Not found");
 });
