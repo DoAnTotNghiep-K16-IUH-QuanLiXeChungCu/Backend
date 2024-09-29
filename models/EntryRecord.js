@@ -35,6 +35,11 @@ const entryRecordSchema = new Schema({
     ref: 'UserShift',
     required: true
   },
+  rfidId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'RFIDCard',
+    required: true
+  },
   isDelete: {
     type: Boolean,
     default: false

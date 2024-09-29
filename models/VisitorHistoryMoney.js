@@ -21,6 +21,7 @@ const visitorHistoryMoneySchema = new Schema({
   },
   vehicleType: {
     type: String,
+    enum: ['car', 'motor'],
     required: true
   },
   parkingFee: {

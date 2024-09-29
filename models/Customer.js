@@ -15,6 +15,16 @@ const customerSchema = new Schema({
     type: String,
     required: true
   },
+  address: {
+    type: String,
+    required: false, 
+    default: ''
+  },
+  isResident: {
+    type: Boolean,
+    required: true,  
+    default: true 
+  },
   isDelete: {
     type: Boolean,
     default: false

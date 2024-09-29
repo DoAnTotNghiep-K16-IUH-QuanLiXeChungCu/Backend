@@ -29,6 +29,7 @@ const exitRecordSchema = new Schema({
   },
   vehicleType: {
     type: String,
+    enum: ['car', 'motor'],
     required: true
   },
   isDelete: {

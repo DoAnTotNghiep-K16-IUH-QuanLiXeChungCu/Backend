@@ -2,13 +2,14 @@ const EntryRecord = require("../models/EntryRecord");
 const UserShift = require("../models/UserShift");
 const User = require("../models/User");
 const Shift = require("../models/Shift");
+const RFIDCard = require("../models/RFIDCard");
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const s3Client = new S3Client({ region: 'your-region' });
 
-const GetAllRecords = async (req, res) => {
+const GetAllEntryRecords = async (req, res) => {
   try {
 
-    const userToken = req.user; // lấy từ token jwt
+    const userToken = req.user;
 
     const { pageNumber = 1, pageSize = 10 } = req.body;
 
@@ -60,6 +61,11 @@ const GetAllRecords = async (req, res) => {
         }
       ]
     })
+    .populate({
+      path: 'rfidId', // Liên kết với bảng RFIDCard thông qua rfidId
+      model: 'RFIDCard', // Lấy dữ liệu từ bảng RFIDCard
+      select: 'uuid' // Chỉ lấy UUID từ bảng RFIDCard
+    })
     .sort({ entryTime: -1 }) 
     .skip(skip)
     .limit(parsedPageSize);
@@ -72,10 +78,8 @@ const GetAllRecords = async (req, res) => {
       });
     }
 
-    // Tính tổng số trang
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
 
-    // Trả về dữ liệu thành công
     return res.status(200).json({
       status: 200,
       data: {
@@ -98,8 +102,123 @@ const GetAllRecords = async (req, res) => {
   }
 };
 
-module.exports = {
-  GetAllRecords
+const GetEntryRecordById = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Thiếu trường id trong body request.'
+      });
+    }
+
+    const entryRecord = await EntryRecord.findById(id)
+      .populate({
+        path: 'users_shiftId',
+        populate: [
+          {
+            path: 'userId',
+            model: 'User',
+            select: 'username'
+          },
+          {
+            path: 'shiftId',
+            model: 'Shift',
+            select: 'shiftName startTime endTime'
+          }
+        ]
+      })
+      .populate({
+        path: 'rfidId',
+        model: 'RFIDCard',
+        select: 'uuid'
+      });
+
+    if (!entryRecord) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy bản ghi EntryRecord với id này.'
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: entryRecord,
+      error: null
+    });
+  } catch (error) {
+    console.error(`Lỗi trong GetEntryRecordById từ EntryRecord:`, error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
 };
 
+const GetEntryRecordByLicensePlate = async (req, res) => {
+  try {
+    const { licensePlate } = req.body;
+
+    if (!licensePlate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Thiếu trường licensePlate trong body request.'
+      });
+    }
+
+    const entryRecords = await EntryRecord.find({ licensePlate })
+      .populate({
+        path: 'users_shiftId',
+        populate: [
+          {
+            path: 'userId',
+            model: 'User',
+            select: 'username'
+          },
+          {
+            path: 'shiftId',
+            model: 'Shift',
+            select: 'shiftName startTime endTime'
+          }
+        ]
+      })
+      .populate({
+        path: 'rfidId',
+        model: 'RFIDCard',
+        select: 'uuid'
+      });
+
+    if (entryRecords.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy bản ghi EntryRecord với licensePlate này.'
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: entryRecords,
+      error: null
+    });
+  } catch (error) {
+    console.error(`Lỗi trong GetEntryRecordByLicensePlate từ EntryRecord:`, error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+module.exports = {
+  GetAllEntryRecords,
+  GetEntryRecordById,
+  GetEntryRecordByLicensePlate
+};
   

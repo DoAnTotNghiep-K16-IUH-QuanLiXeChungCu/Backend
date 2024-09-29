@@ -13,6 +13,7 @@ const vehicleSchema = new Schema({
   },
   type: {
     type: String,
+    enum: ['car', 'motor'],
     required: true
   },
   color: {

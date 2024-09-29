@@ -4,6 +4,7 @@ const Schema = mongoose.Schema;
 const parkingRateSchema = new Schema({
   vehicleType: {
     type: String,
+    enum: ['car', 'motor'],
     required: true
   },
   hourly: {

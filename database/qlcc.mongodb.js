@@ -24,6 +24,8 @@ db.createCollection("users");
 db.createCollection("users_shift");
 // Tạo bảng shift
 db.createCollection("shift");
+// Tạo bảng rfid_cards
+db.createCollection("rfid_cards");
 
 db.users.insertMany([
   {
@@ -247,6 +249,8 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8501"),
     fullName: "Nguyễn Văn A",
     phoneNumber: "0123456589",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
@@ -254,6 +258,8 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8501"),
     fullName: "Nguyễn Văn B",
     phoneNumber: "0193456789",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
@@ -261,6 +267,8 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8502"),
     fullName: "Nguyễn Văn C",
     phoneNumber: "0123356789",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
@@ -268,6 +276,8 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8502"),
     fullName: "Nguyễn Văn D",
     phoneNumber: "0123456729",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
@@ -275,6 +285,8 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8503"),
     fullName: "Nguyễn Văn E",
     phoneNumber: "0123496789",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
@@ -282,6 +294,8 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8503"),
     fullName: "Nguyễn Văn F",
     phoneNumber: "0143456789",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
@@ -289,6 +303,8 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8504"),
     fullName: "Nguyễn Văn G",
     phoneNumber: "0123256789",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
@@ -296,20 +312,26 @@ db.customers.insertMany([
     apartmentsId: ObjectId("60aae4843ae33121e0de8504"),
     fullName: "Nguyễn Văn H",
     phoneNumber: "0127456789",
+    isResident: true,
+    address: '',
     isDelete: false,
   },
   {
     _id: ObjectId("63aae48436542431e0de8509"),
-    apartmentsId: ObjectId("60aae4843ae33121e0de8505"),
+    apartmentsId: '',
     fullName: "Nguyễn Văn I",
     phoneNumber: "0123496789",
+    isResident: false,
+    address: '123 Đường ABC, Quận 1, TP. HCM',
     isDelete: false,
   },
   {
     _id: ObjectId("63aae48436542431e0de8510"),
-    apartmentsId: ObjectId("60aae4843ae33121e0de8505"),
-    fullName: "Nguyễn Văn A",
+    apartmentsId: '',
+    fullName: "Nguyễn Văn K",
     phoneNumber: "0123456789",
+    isResident: false,
+    address: '456 Đường XYZ, Quận 5, TP. HCM',
     isDelete: false,
   }
 ]);
@@ -511,7 +533,8 @@ db.entry_records.insertMany([
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),  
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8502"),
@@ -523,7 +546,8 @@ db.entry_records.insertMany([
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"), 
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8503"),
@@ -535,7 +559,8 @@ db.entry_records.insertMany([
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8523"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8504"),
@@ -547,7 +572,8 @@ db.entry_records.insertMany([
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8514"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8505"),
@@ -559,7 +585,8 @@ db.entry_records.insertMany([
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8506"),
@@ -571,7 +598,8 @@ db.entry_records.insertMany([
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8507"),
@@ -583,7 +611,8 @@ db.entry_records.insertMany([
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8523"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8508"),
@@ -595,7 +624,8 @@ db.entry_records.insertMany([
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8514"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8509"),
@@ -607,7 +637,8 @@ db.entry_records.insertMany([
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
+    isDelete: false
   },
   {
     _id: ObjectId("66aae42226542431e0de8510"),
@@ -619,7 +650,8 @@ db.entry_records.insertMany([
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
-    isDelete: false,
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"), 
+    isDelete: false
   }
 ]);
 
@@ -836,6 +868,19 @@ db.visitor_history_moneys.insertMany([
     vehicleType: "motor",
     parkingFee: 5000,
     isDelete: false,
+  }
+]);
+
+db.rfid_cards.insertMany([
+  {
+    _id: ObjectId("69b8e3ff3ae33121e0de8501"),
+    uuid: "ABC1234567",  // Mã UUID của thẻ
+    createdAt: ISODate("2024-01-01T00:00:00.000Z")
+  },
+  {
+    _id: ObjectId("69b8e3ff3ae33121e0de8502"),
+    uuid: "XYZ9876543",  // Mã UUID của thẻ
+    createdAt: ISODate("2024-01-02T00:00:00.000Z")
   }
 ]);
 
