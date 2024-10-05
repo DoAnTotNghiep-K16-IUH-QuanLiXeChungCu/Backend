@@ -15,5 +15,17 @@ router.get("/GetExitRecordByEntryRecordId", middleware.verifyToken , ExitRecordC
 // http://localhost:3000/api/v1/entryRecord/GetExitRecordByLicensePlate
 router.get("/GetExitRecordByLicensePlate", middleware.verifyToken , ExitRecordController.GetExitRecordByLicensePlate);
 
+// http://localhost:3000/api/v1/entryRecord/GetExitRecordsByDateRange
+router.get("/GetExitRecordsByDateRange", middleware.verifyToken , ExitRecordController.GetExitRecordsByDateRange);
+
+// http://localhost:3000/api/v1/entryRecord/GetExitRecordsByVehicleType
+router.get("/GetExitRecordsByVehicleType", middleware.verifyToken , ExitRecordController.GetExitRecordsByVehicleType);
+
+// http://localhost:3000/api/v1/entryRecord/CountVehicleEntry
+router.get("/CountVehicleEntry", middleware.verifyToken , ExitRecordController.CountVehicleEntry);
+
+// http://localhost:3000/api/v1/entryRecord/CreateExitRecord
+router.post("/CreateExitRecord", middleware.verifyToken , ExitRecordController.CreateExitRecord);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

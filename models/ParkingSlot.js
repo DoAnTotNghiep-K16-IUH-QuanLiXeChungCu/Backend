@@ -8,6 +8,7 @@ const parkingSlotSchema = new Schema({
   },
   slotType: {
     type: String,
+    enum: ['car', 'motor'],
     required: true
   },
   availableSlots: {

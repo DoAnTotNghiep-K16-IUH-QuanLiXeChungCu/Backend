@@ -18,6 +18,13 @@ const ExitRecordRoute = require("./routes/ExitRecordRoute");
 const CustomerRoute = require("./routes/CustomerRoute");
 const VehicleRoute = require("./routes/VehicleRoute");
 const ParkingSlotRoute = require("./routes/ParkingSlotRoute");
+const ResidentHistoryMoneyRoute = require("./routes/ResidentHistoryMoneyRoute");  
+const RFIDCardRoute = require("./routes/RFIDCardRoute");
+const ShiftRoute = require("./routes/ShiftRoute");
+const ParkingRateRoute = require("./routes/ParkingRateRoute");
+const UserShiftRoute = require("./routes/UserShiftRoute");
+const VisitorHistoryMoneyRoute = require("./routes/VisitorHistoryMoneyRoute");
+const ApartmentRoute = require("./routes/ApartmentRoute");
 
 // middleware
 app.use(express.static(path.join(__dirname, "public")));
@@ -41,6 +48,13 @@ app.use("/api/v1/exitRecord", ExitRecordRoute);
 app.use("/api/v1/customer", CustomerRoute);
 app.use("/api/v1/vehicle", VehicleRoute);
 app.use("/api/v1/parkingSlot", ParkingSlotRoute);
+app.use("/api/v1/residentHistoryMoney", ResidentHistoryMoneyRoute);
+app.use("/api/v1/parkingRate", ParkingRateRoute);
+app.use("/api/v1/RFIDCard", RFIDCardRoute);
+app.use("/api/v1/shift", ShiftRoute);
+app.use("/api/v1/userShift", UserShiftRoute);
+app.use("/api/v1/visitorHistoryMoney", VisitorHistoryMoneyRoute);
+app.use("/api/v1/apartment", ApartmentRoute);
 
 app.use(function (req, res) {
   res.status(404).send("Not found");

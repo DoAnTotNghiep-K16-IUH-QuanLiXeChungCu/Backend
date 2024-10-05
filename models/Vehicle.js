@@ -9,7 +9,8 @@ const vehicleSchema = new Schema({
   },
   licensePlate: {
     type: String,
-    required: true
+    required: true,
+    unique: true 
   },
   type: {
     type: String,

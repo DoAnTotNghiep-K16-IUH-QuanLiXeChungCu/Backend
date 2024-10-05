@@ -5,7 +5,6 @@ const customerSchema = new Schema({
   apartmentsId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Apartment',
-    required: true
   },
   fullName: {
     type: String,

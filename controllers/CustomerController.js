@@ -2,6 +2,7 @@ const Customer = require('../models/Customer');
 const Apartment = require('../models/Apartment');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const s3Client = new S3Client({ region: 'your-region' });
+const mongoose = require('mongoose');
 
 const GetAllCustomers = async (req, res) => {
     try {
@@ -122,8 +123,198 @@ const GetCustomerById = async (req, res) => {
     }
 };
 
+const CreateCustomer = async (req, res) => {
+  try {
+    const { apartmentsId, fullName, phoneNumber, address, isResident } = req.body;
+
+    // Kiểm tra giá trị của isResident để xác định apartmentsId và address
+    if (isResident && !apartmentsId) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Cần apartmentsId nếu khách hàng là cư dân.'
+      });
+    }
+
+    if (!isResident && !address) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Cần address nếu khách hàng không phải là cư dân.'
+      });
+    }
+
+    // Kiểm tra số điện thoại phải có từ 10 đến 11 số
+    const phoneRegex = /^\d{10,11}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Số điện thoại phải có từ 10 đến 11 chữ số.'
+      });
+    }
+
+    // Nếu là cư dân, kiểm tra sự tồn tại của apartmentsId
+    if (isResident) {
+      const apartmentExists = await Apartment.findById(apartmentsId);
+      if (!apartmentExists) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'apartmentsId không tồn tại trong cơ sở dữ liệu.'
+        });
+      }
+    }
+
+    // Tạo bản ghi mới
+    const newCustomer = new Customer({
+      apartmentsId: isResident ? apartmentsId : '',  
+      fullName,
+      phoneNumber,
+      address: isResident ? '' : address,  
+      isResident
+    });
+
+    // Lưu vào cơ sở dữ liệu
+    await newCustomer.save();
+
+    return res.status(201).json({
+      status: 201,
+      data: newCustomer,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong CreateCustomer:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+const UpdateCustomer = async (req, res) => {
+  try {
+    const { id, apartmentsId, fullName, phoneNumber, address, isResident } = req.body;
+
+    // Kiểm tra id hợp lệ
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'ID không hợp lệ.'
+      });
+    }
+
+    const customer = await Customer.findById(id);
+
+    if (!customer || customer.isDelete) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy khách hàng với ID này.'
+      });
+    }
+
+    // Kiểm tra số điện thoại phải có từ 10 đến 11 số
+    if (phoneNumber) {
+      const phoneRegex = /^\d{10,11}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'Số điện thoại phải có từ 10 đến 11 chữ số.'
+        });
+      }
+    }
+
+    // Kiểm tra logic của isResident để xác định apartmentsId và address
+    if (isResident) {
+      if (!apartmentsId || !mongoose.Types.ObjectId.isValid(apartmentsId)) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'apartmentsId không hợp lệ hoặc không được cung cấp cho cư dân.'
+        });
+      }
+      customer.apartmentsId = apartmentsId;
+      customer.address = '';  // Cư dân không cần địa chỉ
+    } else {
+      customer.apartmentsId = undefined;  // Gán undefined cho apartmentsId nếu không phải cư dân
+      customer.address = address || '';  // Cập nhật địa chỉ nếu không phải cư dân
+    }
+
+    // Cập nhật các trường khác
+    customer.fullName = fullName || customer.fullName;
+    customer.phoneNumber = phoneNumber || customer.phoneNumber;
+    customer.isResident = isResident;
+
+    // Lưu lại bản ghi đã cập nhật
+    await customer.save();
+
+    return res.status(200).json({
+      status: 200,
+      data: customer,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong UpdateCustomer:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+const DeleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'id không hợp lệ.'
+      });
+    }
+
+    const customer = await Customer.findById(id);
+
+    if (!customer || customer.isDelete) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy khách hàng với id này.'
+      });
+    }
+
+    // Đặt isDelete = true để ẩn khách hàng
+    customer.isDelete = true;
+
+    // Lưu lại bản ghi đã cập nhật
+    await customer.save();
+
+    return res.status(200).json({
+      status: 200,
+      data: customer,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong DeleteCustomer:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
 module.exports = {
   GetAllCustomers,
-  GetCustomerById
+  GetCustomerById,
+  CreateCustomer,
+  UpdateCustomer,
+  DeleteCustomer
 };
   

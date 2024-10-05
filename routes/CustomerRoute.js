@@ -9,5 +9,14 @@ router.get("/GetAllCustomers", middleware.verifyToken , CustomerController.GetAl
 // http://localhost:3000/api/v1/customer/GetCustomerById
 router.get("/GetCustomerById", middleware.verifyToken , CustomerController.GetCustomerById);
 
+// http://localhost:3000/api/v1/customer/CreateCustomer
+router.post("/CreateCustomer", middleware.verifyToken , CustomerController.CreateCustomer);
+
+// http://localhost:3000/api/v1/customer/UpdateCustomer
+router.put("/UpdateCustomer", middleware.verifyToken , CustomerController.UpdateCustomer);
+
+// http://localhost:3000/api/v1/customer/DeleteCustomer
+router.get("/DeleteCustomer", middleware.verifyToken , CustomerController.DeleteCustomer);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

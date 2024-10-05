@@ -2,6 +2,7 @@ const Vehicle = require('../models/Vehicle');
 const Customer = require('../models/Customer');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const s3Client = new S3Client({ region: 'your-region' });
+const mongoose = require('mongoose');
 
 const GetAllVehicles = async (req, res) => {
   try {
@@ -164,8 +165,321 @@ const GetVehicleByCustomerId = async (req, res) => {
   }
 };
 
+const GetVehicleByLicensePlate = async (req, res) => {
+  try {
+    const { licensePlate } = req.body;
+
+    if (!licensePlate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Thiếu licensePlate trong body request.'
+      });
+    }
+
+    const vehicle = await Vehicle.findOne({ licensePlate, isDelete: false })
+      .populate({
+        path: 'customerId',
+        model: 'Customer',
+        select: 'fullName phoneNumber'
+      });
+
+    if (!vehicle) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy phương tiện nào với biển số này.'
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: vehicle,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong GetVehicleByLicensePlate:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+const GetVehiclesByType = async (req, res) => {
+  try {
+    const { type } = req.body;
+
+    if (!type) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Thiếu type trong body request.'
+      });
+    }
+
+    const vehicles = await Vehicle.find({ type, isDelete: false })
+      .populate({
+        path: 'customerId',
+        model: 'Customer',
+        select: 'fullName phoneNumber'
+      });
+
+    if (vehicles.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy phương tiện nào với loại này.'
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: vehicles,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong GetVehiclesByType:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+const GetVehiclesByBrand = async (req, res) => {
+  try {
+    const { brand } = req.body;
+
+    if (!brand) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Thiếu brand trong body request.'
+      });
+    }
+
+    const vehicles = await Vehicle.find({ brand: { $regex: new RegExp(brand, 'i') }, isDelete: false })
+      .populate({
+        path: 'customerId',
+        model: 'Customer',
+        select: 'fullName phoneNumber'
+      });
+
+    if (vehicles.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy phương tiện nào với nhãn hiệu này.'
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: vehicles,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong GetVehiclesByBrand:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+const CreateVehicle = async (req, res) => {
+  try {
+    const { customerId, licensePlate, type, color, brand } = req.body;
+
+    // Kiểm tra các trường bắt buộc
+    if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'customerId không hợp lệ.'
+      });
+    }
+
+    // Kiểm tra nếu customerId tồn tại trong bảng Customer
+    const customerExists = await Customer.findById(customerId);
+    if (!customerExists) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'customerId không tồn tại.'
+      });
+    }
+
+    if (!licensePlate || !type || !color || !brand) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Các trường licensePlate, type, color, và brand đều bắt buộc.'
+      });
+    }
+
+    const validTypes = ['car', 'motor'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Giá trị type phải là "car" hoặc "motor".'
+      });
+    }
+
+    // Tạo phương tiện mới
+    const newVehicle = new Vehicle({
+      customerId,
+      licensePlate,
+      type,
+      color,
+      brand
+    });
+
+    // Lưu vào cơ sở dữ liệu
+    await newVehicle.save();
+
+    return res.status(201).json({
+      status: 201,
+      data: newVehicle,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong CreateVehicle:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+const UpdateVehicle = async (req, res) => {
+  try {
+    const { id, customerId, licensePlate, type, color, brand } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'id không hợp lệ.'
+      });
+    }
+
+    const vehicle = await Vehicle.findById(id);
+
+    if (!vehicle || vehicle.isDelete) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy phương tiện với id này.'
+      });
+    }
+
+    // Nếu customerId có trong request, kiểm tra xem nó có hợp lệ và tồn tại hay không
+    if (customerId && mongoose.Types.ObjectId.isValid(customerId)) {
+      const customerExists = await Customer.findById(customerId);
+      if (!customerExists) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'customerId không tồn tại.'
+        });
+      }
+    }
+
+    if (type) {
+      const validTypes = ['car', 'motor'];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'Giá trị type phải là "car" hoặc "motor".'
+        });
+      }
+    }
+
+    // Cập nhật các trường cần thiết
+    vehicle.customerId = customerId || vehicle.customerId;
+    vehicle.licensePlate = licensePlate || vehicle.licensePlate;
+    vehicle.type = type || vehicle.type;
+    vehicle.color = color || vehicle.color;
+    vehicle.brand = brand || vehicle.brand;
+
+    // Lưu lại bản ghi đã cập nhật
+    await vehicle.save();
+
+    return res.status(200).json({
+      status: 200,
+      data: vehicle,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong UpdateVehicle:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+const DeleteVehicle = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'id không hợp lệ.'
+      });
+    }
+
+    const vehicle = await Vehicle.findById(id);
+
+    if (!vehicle || vehicle.isDelete) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy phương tiện với id này.'
+      });
+    }
+
+    // Đặt isDelete = true để đánh dấu phương tiện đã bị xóa
+    vehicle.isDelete = true;
+
+    // Lưu lại bản ghi đã cập nhật
+    await vehicle.save();
+
+    return res.status(200).json({
+      status: 200,
+      data: vehicle,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong DeleteVehicle:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
+
 module.exports = {
   GetAllVehicles,
   GetVehicleById,
-  GetVehicleByCustomerId
+  GetVehicleByCustomerId,
+  GetVehicleByLicensePlate,
+  GetVehiclesByType,
+  GetVehiclesByBrand,
+  CreateVehicle,
+  UpdateVehicle,
+  DeleteVehicle
 };
