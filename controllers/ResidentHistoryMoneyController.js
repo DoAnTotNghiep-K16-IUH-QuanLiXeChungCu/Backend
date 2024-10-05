@@ -445,7 +445,6 @@ const GetResidentHistoryMoneyById = async (req, res) => {
   }
 };
 
-// Thống kê ResidentHistoryMoney theo tháng
 const GetMonthlyStatistics = async (req, res) => {
   try {
     const { month, year } = req.body;
@@ -491,7 +490,6 @@ const GetMonthlyStatistics = async (req, res) => {
   }
 };
 
-// Thống kê ResidentHistoryMoney theo năm
 const GetYearlyStatistics = async (req, res) => {
   try {
     const { year } = req.body;

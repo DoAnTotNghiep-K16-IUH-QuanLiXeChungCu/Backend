@@ -572,7 +572,6 @@ const CreateExitRecord = async (req, res) => {
   }
 };
 
-
 module.exports = {
   GetAllExitRecords,
   GetExitRecordById,
