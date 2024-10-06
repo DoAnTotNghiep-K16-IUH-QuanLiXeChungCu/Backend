@@ -1,5 +1,7 @@
 const ExitRecord = require("../models/ExitRecord");
 const EntryRecord = require("../models/EntryRecord");
+const ParkingRate = require("../models/ParkingRate");
+const VisitorHistoryMoney = require("../models/VisitorHistoryMoney");
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const s3Client = new S3Client({ region: 'your-region' });
 const mongoose = require('mongoose');
@@ -459,6 +461,47 @@ const CountVehicleEntry = async (req, res) => {
   }
 };
 
+const calculateParkingFee = async (vehicleType, hoursParked) => {
+  // Lấy danh sách giá cho loại xe cụ thể
+  const parkingRates = await ParkingRate.find({ vehicleType }).sort({ hourly: 1 });
+
+  // Lấy mức giá cao nhất trong ngày (thường là 24 giờ)
+  const maxRate = parkingRates[parkingRates.length - 1];
+
+  // Nếu thời gian đỗ <= 24h, tính giá cao nhất trong ngày đó
+  if (hoursParked <= 24) {
+    // Tìm giá tương ứng với số giờ đỗ
+    for (let rate of parkingRates) {
+      if (hoursParked <= rate.hourly) {
+        return rate.price;
+      }
+    }
+    // Trường hợp nếu vượt quá giờ lớn nhất (24h)
+    return maxRate.price;
+  }
+
+  // Nếu thời gian đỗ xe > 24h
+  let totalFee = maxRate.price; // Tính phí cho ngày đầu tiên
+  let remainingHours = hoursParked - 24; // Giờ còn lại sau ngày đầu tiên
+
+  // Tính phí cho từng ngày sau đó, mỗi ngày là một giá trị của maxRate
+  const fullDays = Math.floor(remainingHours / 24); // Số ngày đầy đủ
+  totalFee += fullDays * maxRate.price; // Cộng thêm phí cho từng ngày
+
+  // Xử lý số giờ lẻ còn lại
+  remainingHours = remainingHours % 24;
+  if (remainingHours > 0) {
+    // Tìm giá cho số giờ lẻ còn lại
+    for (let rate of parkingRates) {
+      if (remainingHours <= rate.hourly) {
+        totalFee += rate.price;
+        break;
+      }
+    }
+  }
+  return totalFee;
+};
+
 const CreateExitRecord = async (req, res) => {
   try {
     const { 
@@ -538,38 +581,76 @@ const CreateExitRecord = async (req, res) => {
       });
     }
 
-    // Tạo bản ghi ExitRecord mới
-    const newExitRecord = new ExitRecord({
-      entry_recordId,
-      exitTime,
-      picture_front,
-      picture_back,
-      licensePlate,
-      isResident,
-      vehicleType
-    });
+   // Tính thời gian đỗ xe
+   const duration = Math.abs(new Date(exitTime) - new Date(entryRecord.entryTime));
+   const hoursParked = Math.ceil(duration / (1000 * 60 * 60)); // Làm tròn lên theo giờ
 
-    // Lưu bản ghi vào cơ sở dữ liệu
-    await newExitRecord.save();
+   let parkingFee = 0;
 
-    // Cập nhật isOut của EntryRecord thành true
-    entryRecord.isOut = true;
-    await entryRecord.save();
+   // Nếu không phải cư dân, tính phí đỗ xe
+   if (!isResident) {
+     parkingFee = await calculateParkingFee(vehicleType, hoursParked);
+   }
 
-    // Trả về phản hồi thành công
-    return res.status(201).json({
-      status: 201,
-      data: newExitRecord,
-      error: null
-    });
-  } catch (error) {
-    console.error(`Lỗi trong CreateExitRecord từ ExitRecord:`, error);
-    return res.status(500).json({
-      status: 500,
-      data: null,
-      error: 'Lỗi máy chủ không xác định.'
-    });
-  }
+   // Tạo bản ghi ExitRecord mới
+   const newExitRecord = new ExitRecord({
+     entry_recordId,
+     exitTime,
+     picture_front,
+     picture_back,
+     licensePlate,
+     isResident,
+     vehicleType
+   });
+
+   // Lưu bản ghi vào cơ sở dữ liệu
+   await newExitRecord.save();
+
+   // Cập nhật isOut của EntryRecord thành true
+   entryRecord.isOut = true;
+   await entryRecord.save();
+
+   // Nếu không phải cư dân, lưu phí đỗ xe vào VisitorHistoryMoney
+   if (!isResident) {
+     const newVisitorHistoryMoney = new VisitorHistoryMoney({
+       exit_recordId: newExitRecord._id,
+       licensePlate,
+       dateTime: exitTime,
+       hourly: hoursParked,
+       vehicleType,
+       parkingFee
+     });
+
+     await newVisitorHistoryMoney.save();
+
+     // Trả về phản hồi với thông tin về thời gian đỗ xe và phí đỗ xe
+     return res.status(201).json({
+       status: 201,
+       data: {
+         newExitRecord,
+         parkingDetails: {
+           hoursParked,
+           parkingFee
+         }
+       },
+       error: null
+     });
+   }
+
+   // Trả về phản hồi thành công cho cư dân (không tính phí đỗ xe)
+   return res.status(201).json({
+     status: 201,
+     data: newExitRecord,
+     error: null
+   });
+ } catch (error) {
+   console.error('Lỗi trong CreateExitRecord từ ExitRecord:', error);
+   return res.status(500).json({
+     status: 500,
+     data: null,
+     error: 'Lỗi máy chủ không xác định.'
+   });
+ }
 };
 
 module.exports = {
