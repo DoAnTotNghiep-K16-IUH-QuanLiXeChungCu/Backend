@@ -4,7 +4,7 @@ const middleware = require("../middleware/middlewareController");
 const router = Router();
 
 // http://localhost:3000/api/v1/parkingRate/GetAllParkingRates
-router.get("/GetAllParkingRates", middleware.verifyToken , ParkingRateController.GetAllParkingRates);
+router.patch("/GetAllParkingRates", middleware.verifyToken , ParkingRateController.GetAllParkingRates);
 
 // http://localhost:3000/api/v1/parkingRate/CreateParkingRate
 router.post("/CreateParkingRate", middleware.verifyToken , ParkingRateController.CreateParkingRate);
@@ -13,7 +13,7 @@ router.post("/CreateParkingRate", middleware.verifyToken , ParkingRateController
 router.put("/UpdateParkingRate", middleware.verifyToken , ParkingRateController.UpdateParkingRate);
 
 // http://localhost:3000/api/v1/parkingRate/GetParkingRateById
-router.get("/GetParkingRateById", middleware.verifyToken , ParkingRateController.GetParkingRateById);
+router.patch("/GetParkingRateById", middleware.verifyToken , ParkingRateController.GetParkingRateById);
 
 // http://localhost:3000/api/v1/parkingRate/DeleteParkingRate
 router.delete("/DeleteParkingRate", middleware.verifyToken , ParkingRateController.DeleteParkingRate);

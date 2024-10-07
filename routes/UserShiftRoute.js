@@ -4,7 +4,7 @@ const middleware = require("../middleware/middlewareController");
 const router = Router();
 
 // http://localhost:3000/api/v1/userShift/GetAllUserShifts
-router.get("/GetAllUserShifts", middleware.verifyToken , UserShiftController.GetAllUserShifts);
+router.patch("/GetAllUserShifts", middleware.verifyToken , UserShiftController.GetAllUserShifts);
 
 // http://localhost:3000/api/v1/userShift/GetAllUserShifts
 router.post("/CreateUserShift", middleware.verifyToken , UserShiftController.CreateUserShift);
@@ -16,7 +16,7 @@ router.put("/UpdateUserShift", middleware.verifyToken , UserShiftController.Upda
 router.delete("/UpdateUserShift", middleware.verifyToken , UserShiftController.DeleteUserShift);
 
 // http://localhost:3000/api/v1/userShift/GetUserShiftsByUserIdAndDateRange
-router.get("/GetUserShiftsByUserIdAndDateRange", middleware.verifyToken , UserShiftController.GetUserShiftsByUserIdAndDateRange);
+router.patch("/GetUserShiftsByUserIdAndDateRange", middleware.verifyToken , UserShiftController.GetUserShiftsByUserIdAndDateRange);
 
 // API 
 module.exports = router;

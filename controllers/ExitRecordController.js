@@ -404,7 +404,7 @@ const GetExitRecordsByVehicleType = async (req, res) => {
   }
 };
 
-const CountVehicleEntry = async (req, res) => {
+const CountVehicleExitRecord = async (req, res) => {
   try {
     const { date } = req.body;
 
@@ -660,6 +660,6 @@ module.exports = {
   GetExitRecordByLicensePlate,
   GetExitRecordsByDateRange,
   GetExitRecordsByVehicleType,
-  CountVehicleEntry,
+  CountVehicleExitRecord,
   CreateExitRecord
 };
