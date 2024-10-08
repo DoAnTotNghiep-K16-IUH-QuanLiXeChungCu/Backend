@@ -461,7 +461,7 @@ const CountVehicleEntry = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu trường date trong body request.'
+        error: 'Thiếu trường date trong body request.',
       });
     }
 
@@ -470,33 +470,50 @@ const CountVehicleEntry = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'date không hợp lệ.'
+        error: 'date không hợp lệ.',
       });
     }
 
     const startOfDay = new Date(parsedDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(parsedDate.setHours(23, 59, 59, 999));
 
-    const vehicleCount = await EntryRecord.countDocuments({
-      entryTime: {
-        $gte: startOfDay,
-        $lte: endOfDay
+    const vehicleCounts = await EntryRecord.aggregate([
+      {
+        $match: {
+          entryTime: {
+            $gte: startOfDay,
+            $lte: endOfDay,
+          },
+          isDelete: false,
+          isOut: true,
+        },
       },
-      isDelete: false,
-      isOut: true
-    });
+      {
+        $group: {
+          _id: "$vehicleType",
+          amount: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          vehicleType: "$_id",
+          amount: 1,
+        },
+      },
+    ]);
 
     return res.status(200).json({
       status: 200,
-      data: { count: vehicleCount },
-      error: null
+      data: vehicleCounts,
+      error: null,
     });
   } catch (error) {
     console.error('Lỗi trong CountVehicleEntry:', error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: 'Lỗi máy chủ không xác định.',
     });
   }
 };

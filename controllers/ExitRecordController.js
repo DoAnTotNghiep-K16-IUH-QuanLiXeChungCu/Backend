@@ -413,19 +413,19 @@ const CountVehicleExitRecord = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu trường date trong body request.'
+        error: 'Thiếu trường date trong body request.',
       });
     }
 
     // Chuyển đổi date thành đối tượng Date
     const parsedDate = new Date(date);
-    
+
     // Kiểm tra tính hợp lệ của date
     if (isNaN(parsedDate.getTime())) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'date không hợp lệ.'
+        error: 'date không hợp lệ.',
       });
     }
 
@@ -433,30 +433,49 @@ const CountVehicleExitRecord = async (req, res) => {
     const startOfDay = new Date(parsedDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(parsedDate.setHours(23, 59, 59, 999));
 
-    // Đếm số lượng xe ra trong khoảng thời gian này với điều kiện isOut == true
-    const vehicleCount = await ExitRecord.countDocuments({
-      exitTime: {
-        $gte: startOfDay,
-        $lte: endOfDay
+    // Lấy danh sách các entryRecordId cho các xe đã ra (isOut: true)
+    const entryRecordIds = await EntryRecord.find({ isOut: true }).distinct('_id');
+
+    // Sử dụng aggregation để nhóm và đếm số lượng xe theo vehicleType
+    const vehicleCounts = await ExitRecord.aggregate([
+      {
+        $match: {
+          exitTime: {
+            $gte: startOfDay,
+            $lte: endOfDay,
+          },
+          isDelete: false, // Chỉ đếm những bản ghi chưa bị xóa
+          entry_recordId: {
+            $in: entryRecordIds,
+          },
+        },
       },
-      isDelete: false, // Chỉ đếm những bản ghi chưa bị xóa
-      // Kiểm tra là xe đã ra
-      entry_recordId: {
-        $in: await EntryRecord.find({ isOut: true }).distinct('_id')
-      }
-    });
+      {
+        $group: {
+          _id: "$vehicleType", // Nhóm theo vehicleType
+          amount: { $sum: 1 }, // Đếm số lượng cho mỗi loại xe
+        },
+      },
+      {
+        $project: {
+          _id: 0, // Ẩn _id
+          vehicleType: "$_id", // Gán vehicleType từ _id
+          amount: 1, // Hiển thị số lượng xe
+        },
+      },
+    ]);
 
     return res.status(200).json({
       status: 200,
-      data: { count: vehicleCount },
-      error: null
+      data: vehicleCounts,
+      error: null,
     });
   } catch (error) {
-    console.error(`Lỗi trong countVehicleEntry từ ExitRecord:`, error);
+    console.error('Lỗi trong CountVehicleExitRecord:', error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: 'Lỗi máy chủ không xác định.',
     });
   }
 };
