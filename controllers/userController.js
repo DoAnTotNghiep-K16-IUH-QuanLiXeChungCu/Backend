@@ -55,7 +55,7 @@ const login = async (req, res) => {
         role: user.role
       },
       process.env.JWT_ACCESS_KEY, // Mã bí mật JWT từ biến môi trường
-      { expiresIn: "1h" } // Hạn sử dụng của JWT là 1 giờ
+      { expiresIn: "6h" } // Hạn sử dụng của JWT là 1 giờ
     );
 
     // Destructuring sau khi truy cập user._doc, bỏ thuộc tính password
