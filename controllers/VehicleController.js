@@ -331,6 +331,16 @@ const CreateVehicle = async (req, res) => {
       });
     }
 
+    // Kiểm tra xem licensePlate đã tồn tại chưa
+    const vehicleExists = await Vehicle.findOne({ licensePlate });
+    if (vehicleExists) {
+      return res.status(409).json({ // 409 Conflict status code để báo lỗi trùng lặp
+        status: 409,
+        data: null,
+        error: 'Phương tiện với biển số này đã tồn tại.'
+      });
+    }
+
     // Tạo phương tiện mới
     const newVehicle = new Vehicle({
       customerId,

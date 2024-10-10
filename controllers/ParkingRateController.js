@@ -104,7 +104,7 @@ const CreateParkingRate = async (req, res) => {
 
 const UpdateParkingRate = async (req, res) => {
   try {
-    const { id, price } = req.body;
+    const { id, price, vehicleType, hourly } = req.body; // Lấy thêm vehicleType và hourly
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
