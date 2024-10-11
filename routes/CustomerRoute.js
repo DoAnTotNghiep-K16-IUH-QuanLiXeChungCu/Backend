@@ -10,7 +10,7 @@ router.patch("/GetAllCustomers", middleware.verifyToken , CustomerController.Get
 router.patch("/GetCustomerById", middleware.verifyToken , CustomerController.GetCustomerById);
 
 // http://localhost:3000/api/v1/customer/CreateCustomer
-router.patch("/CreateCustomer", middleware.verifyToken , CustomerController.CreateCustomer);
+router.post("/CreateCustomer", middleware.verifyToken , CustomerController.CreateCustomer);
 
 // http://localhost:3000/api/v1/customer/UpdateCustomer
 router.put("/UpdateCustomer", middleware.verifyToken , CustomerController.UpdateCustomer);

@@ -7,7 +7,7 @@ const router = Router();
 router.patch("/GetAllVehicles", middleware.verifyToken , VehicleController.GetAllVehicles);
 
 // http://localhost:3000/api/v1/vehicle/GetVehicleById
-router.patch("/GetVehicleById", middleware.verifyToken , VehicleController.GetVehicleById);
+router.patch("/GetVehicleById" , VehicleController.GetVehicleById);
 
 // http://localhost:3000/api/v1/vehicle/GetVehicleByCustomerId
 router.patch("/GetVehicleByCustomerId", middleware.verifyToken , VehicleController.GetVehicleByCustomerId);

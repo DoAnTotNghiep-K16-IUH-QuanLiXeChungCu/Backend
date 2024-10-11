@@ -168,7 +168,7 @@ const CreateCustomer = async (req, res) => {
 
     // Tạo bản ghi mới
     const newCustomer = new Customer({
-      apartmentsId: isResident ? apartmentsId : '',  
+      apartmentsId: isResident ? apartmentsId || null : null, 
       fullName,
       phoneNumber,
       address: isResident ? '' : address,  

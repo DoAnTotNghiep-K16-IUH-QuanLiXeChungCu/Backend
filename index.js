@@ -25,6 +25,7 @@ const ParkingRateRoute = require("./routes/ParkingRateRoute");
 const UserShiftRoute = require("./routes/UserShiftRoute");
 const VisitorHistoryMoneyRoute = require("./routes/VisitorHistoryMoneyRoute");
 const ApartmentRoute = require("./routes/ApartmentRoute");
+const UploadRoute = require("./routes/UploadRoute");
 
 // middleware
 app.use(express.static(path.join(__dirname, "public")));
@@ -55,6 +56,7 @@ app.use("/api/v1/shift", ShiftRoute);
 app.use("/api/v1/userShift", UserShiftRoute);
 app.use("/api/v1/visitorHistoryMoney", VisitorHistoryMoneyRoute);
 app.use("/api/v1/apartment", ApartmentRoute);
+app.use("/api/v1/upload", UploadRoute); 
 
 app.use(function (req, res) {
   res.status(404).send("Not found");
