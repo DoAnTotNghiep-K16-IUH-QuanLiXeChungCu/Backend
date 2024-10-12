@@ -69,7 +69,7 @@ const login = async (req, res) => {
 
 
 const signup = async (req, res) => {
-  const { username, password, age, address, phoneNumber } = req.body;
+  const { username, password, age, address, fullname, phoneNumber } = req.body;
 
   // Regex để kiểm tra username không dấu và password không có khoảng trắng
   const usernameRegex = /^[a-zA-Z0-9]+$/;
@@ -117,6 +117,7 @@ const signup = async (req, res) => {
       username: username,
       password: hashedPassword, // Mật khẩu đã được mã hóa
       age: age,
+      fullname: fullname,
       address: address,
       phoneNumber: phoneNumber,
     });
@@ -210,7 +211,7 @@ const GetAllUsers = async (req, res) => {
 
 const UpdateUser = async (req, res) => {
   try {
-    const { id, username, age, address, phoneNumber, role, password } = req.body;
+    const { id, username, fullname, age, address, phoneNumber, role, password } = req.body;
 
     // Kiểm tra tính hợp lệ của id
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -278,6 +279,7 @@ const UpdateUser = async (req, res) => {
 
     // Cập nhật các trường cần thiết
     user.username = username || user.username;
+    user.fullname = fullname || user.fullname; // Cập nhật fullname
     user.age = age || user.age;
     user.address = address || user.address;
     user.phoneNumber = phoneNumber || user.phoneNumber;
