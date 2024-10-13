@@ -341,8 +341,8 @@ const CreateVehicle = async (req, res) => {
       });
     }
 
-    // Tạo phương tiện mới
-    const newVehicle = new Vehicle({
+     // Tạo phương tiện mới
+     const newVehicle = new Vehicle({
       customerId,
       licensePlate,
       type,
@@ -353,9 +353,17 @@ const CreateVehicle = async (req, res) => {
     // Lưu vào cơ sở dữ liệu
     await newVehicle.save();
 
+    // Populate để lấy thông tin chi tiết của customer
+    const vehicleWithCustomerDetails = await Vehicle.findById(newVehicle._id)
+      .populate({
+        path: 'customerId', // Populate customerId để lấy thông tin chi tiết của khách hàng
+        model: 'Customer', // Liên kết với model Customer
+        select: 'fullName phoneNumber address isResident' // Chỉ lấy các trường cần thiết
+      });
+
     return res.status(201).json({
       status: 201,
-      data: newVehicle,
+      data: vehicleWithCustomerDetails,
       error: null
     });
   } catch (error) {
@@ -423,9 +431,17 @@ const UpdateVehicle = async (req, res) => {
     // Lưu lại bản ghi đã cập nhật
     await vehicle.save();
 
+    // Populate để lấy thông tin chi tiết của customer sau khi cập nhật
+    const updatedVehicle = await Vehicle.findById(vehicle._id)
+      .populate({
+        path: 'customerId', // Populate customerId để lấy thông tin chi tiết của khách hàng
+        model: 'Customer', // Liên kết với model Customer
+        select: 'fullName phoneNumber address isResident' // Chỉ lấy các trường cần thiết
+      });
+
     return res.status(200).json({
       status: 200,
-      data: vehicle,
+      data: updatedVehicle, // Trả về thông tin phương tiện kèm theo thông tin chi tiết khách hàng
       error: null
     });
   } catch (error) {

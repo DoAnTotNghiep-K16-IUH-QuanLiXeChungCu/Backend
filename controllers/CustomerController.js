@@ -310,11 +310,111 @@ const DeleteCustomer = async (req, res) => {
   }
 };
 
+const FilterCustomers = async (req, res) => {
+  try {
+    const { isResident, apartmentName, pageNumber = 1, pageSize = 10 } = req.body;
+
+    // Kiểm tra pageNumber và pageSize
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+      });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+
+    // Tạo điều kiện lọc ban đầu
+    let matchCondition = { isDelete: false };
+
+    if (typeof isResident !== 'undefined') {
+      matchCondition.isResident = isResident;
+    }
+
+    // Tạo pipeline cho aggregation
+    const pipeline = [
+      { $match: matchCondition },
+      {
+        $lookup: {
+          from: 'apartments', // Tên collection apartments
+          localField: 'apartmentsId',
+          foreignField: '_id',
+          as: 'apartment'
+        }
+      },
+      { $unwind: { path: '$apartment', preserveNullAndEmptyArrays: true } } // Nếu không có apartment, giữ giá trị null
+    ];
+
+    // Lọc theo tên căn hộ (apartmentName) nếu có
+    if (apartmentName) {
+      pipeline.push({
+        $match: { 'apartment.name': { $regex: apartmentName, $options: 'i' } }
+      });
+    }
+
+    // Sử dụng $facet để thực hiện cả phân trang và đếm tổng bản ghi trong một truy vấn
+    pipeline.push({
+      $facet: {
+        paginatedResults: [{ $skip: skip }, { $limit: parsedPageSize }],
+        totalCount: [{ $count: 'total' }]
+      }
+    });
+
+    // Thực hiện aggregation
+    const results = await Customer.aggregate(pipeline);
+
+    const customers = results[0].paginatedResults;
+    const totalRecords = results[0].totalCount[0]?.total || 0;
+
+    if (totalRecords === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy khách hàng nào theo tiêu chí lọc.'
+      });
+    }
+
+    const totalPages = Math.ceil(totalRecords / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        customers,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalRecords,
+        totalPages
+      },
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi không xác định trong FilterCustomers:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
 module.exports = {
   GetAllCustomers,
   GetCustomerById,
   CreateCustomer,
   UpdateCustomer,
-  DeleteCustomer
+  DeleteCustomer,
+  FilterCustomers
 };
   

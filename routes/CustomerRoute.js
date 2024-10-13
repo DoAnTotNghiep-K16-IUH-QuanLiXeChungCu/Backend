@@ -16,7 +16,10 @@ router.post("/CreateCustomer", middleware.verifyToken , CustomerController.Creat
 router.put("/UpdateCustomer", middleware.verifyToken , CustomerController.UpdateCustomer);
 
 // http://localhost:3000/api/v1/customer/DeleteCustomer
-router.patch("/DeleteCustomer", middleware.verifyToken , CustomerController.DeleteCustomer);
+router.delete("/DeleteCustomer", middleware.verifyToken , CustomerController.DeleteCustomer);
+
+// http://localhost:3000/api/v1/customer/FilterCustomers
+router.patch("/FilterCustomers", middleware.verifyToken , CustomerController.FilterCustomers);
 
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

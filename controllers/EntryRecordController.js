@@ -644,6 +644,54 @@ const CreateEntryRecord = async (req, res) => {
   }
 };
 
+const CountVehicleNonExit = async (req, res) => {
+  try {
+    // Đếm số lượng xe chưa ra, với điều kiện isOut là false và chia theo loại xe
+    const vehicleCounts = await EntryRecord.aggregate([
+      {
+        $match: {
+          isOut: false, // Chỉ chọn những xe chưa ra
+          isDelete: false // Không bao gồm bản ghi bị xóa
+        }
+      },
+      {
+        $group: {
+          _id: "$vehicleType", // Nhóm theo loại phương tiện (car hoặc motor)
+          count: { $sum: 1 } // Đếm số lượng phương tiện
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          vehicleType: "$_id", // Đổi tên _id thành vehicleType
+          count: 1
+        }
+      }
+    ]);
+
+    if (vehicleCounts.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không có phương tiện nào chưa ra khỏi bãi xe.'
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: vehicleCounts,
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong countVehicleNonExit:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
 module.exports = {
   GetAllEntryRecords,
   GetEntryRecordById,
@@ -651,6 +699,7 @@ module.exports = {
   GetEntryRecordsByDateRange,
   GetEntryRecordsByVehicleType,
   CountVehicleEntry,
-  CreateEntryRecord
+  CreateEntryRecord,
+  CountVehicleNonExit
 };
   
