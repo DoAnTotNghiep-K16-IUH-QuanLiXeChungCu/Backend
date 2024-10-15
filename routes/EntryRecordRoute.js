@@ -27,5 +27,8 @@ router.post("/CreateEntryRecord", middleware.verifyToken , EntryRecordController
 // http://localhost:3000/api/v1/entryRecord/CountVehicleNonExit
 router.get("/CountVehicleNonExit", middleware.verifyToken , EntryRecordController.CountVehicleNonExit);
 
+// http://localhost:3000/api/v1/entryRecord/FilterEntryRecords
+router.patch("/FilterEntryRecords", middleware.verifyToken , EntryRecordController.FilterEntryRecords);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router; 

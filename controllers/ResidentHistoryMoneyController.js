@@ -189,21 +189,34 @@ const CreateResidentHistoryMoney = async (req, res) => {
       });
 
       await newResidentHistoryMoney.save();
-
-      return res.status(201).json({
-          status: 201,
-          data: newResidentHistoryMoney,
-          error: null
-      });
-  } catch (error) {
-      console.error('Lỗi không xác định trong CreateResidentHistoryMoney:', error);
-      return res.status(500).json({
-          status: 500,
-          data: null,
-          error: 'Lỗi máy chủ không xác định.'
-      });
-  }
-};
+      
+         // Sử dụng populate tương tự như bạn yêu cầu
+         const populatedResidentHistoryMoney = await ResidentHistoryMoney.findById(newResidentHistoryMoney._id)
+         .populate({
+           path: 'vehicleId',
+           model: 'Vehicle',
+           select: 'licensePlate type brand'
+         })
+         .populate({
+           path: 'parking_slotId',
+           model: 'ParkingSlot',
+           select: 'slotCode slotType availableSlots  totalQuantity'
+         });
+ 
+       return res.status(201).json({
+           status: 201,
+           data: populatedResidentHistoryMoney,
+           error: null
+       });
+   } catch (error) {
+       console.error('Lỗi không xác định trong CreateResidentHistoryMoney:', error);
+       return res.status(500).json({
+           status: 500,
+           data: null,
+           error: 'Lỗi máy chủ không xác định.'
+       });
+   }
+ };
 
 const UpdateResidentHistoryMoney = async (req, res) => {
   try {

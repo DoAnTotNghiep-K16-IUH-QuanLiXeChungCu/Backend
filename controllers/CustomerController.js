@@ -252,11 +252,18 @@ const UpdateCustomer = async (req, res) => {
     // Lưu lại bản ghi đã cập nhật
     await customer.save();
 
-    return res.status(200).json({
-      status: 200,
-      data: customer,
-      error: null
+    const updatedCustomer = await Customer.findById(customer._id)
+    .populate({
+      path: 'apartmentsId',  // Populate apartmentsId
+      model: 'Apartment',    // Model là Apartment
+      select: 'name'         // Chỉ lấy trường name của Apartment
     });
+
+  return res.status(200).json({
+    status: 200,
+    data: updatedCustomer,
+    error: null
+  });
   } catch (error) {
     console.error('Lỗi trong UpdateCustomer:', error);
     return res.status(500).json({

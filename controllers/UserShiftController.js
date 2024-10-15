@@ -376,11 +376,110 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
   }
 };
 
+const FilterUserShift = async (req, res) => {
+  try {
+    const { date, shiftId, pageNumber = 1, pageSize = 10 } = req.body;
+
+    // Kiểm tra tính hợp lệ của pageNumber và pageSize
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+      });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+
+    // Tạo điều kiện lọc động
+    const matchCondition = {};
+
+    // Lọc theo date nếu có
+    if (date) {
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'Ngày không hợp lệ.'
+        });
+      }
+      matchCondition.dateTime = {
+        $gte: new Date(new Date(parsedDate).setHours(0, 0, 0, 0)),  // Đặt bắt đầu ngày
+        $lte: new Date(new Date(parsedDate).setHours(23, 59, 59, 999))  // Đặt cuối ngày
+      };
+    }
+
+    // Lọc theo shiftId nếu có
+    if (shiftId && mongoose.Types.ObjectId.isValid(shiftId)) {
+      const shiftExists = await Shift.findById(shiftId);
+      if (!shiftExists) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'shiftId không tồn tại trong cơ sở dữ liệu.'
+        });
+      }
+      matchCondition.shiftId = shiftId;
+    }
+
+    // Đếm tổng số bản ghi phù hợp
+    const totalRecords = await UserShift.countDocuments(matchCondition);
+    if (totalRecords === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không có UserShift nào phù hợp với điều kiện lọc.'
+      });
+    }
+
+    // Lấy danh sách UserShift dựa trên điều kiện lọc và phân trang
+    const userShifts = await UserShift.find(matchCondition)
+      .skip(skip)
+      .limit(parsedPageSize)
+      .populate('userId', 'username age fullname')  // Đổi từ 'username' thành 'fullName'
+      .populate('shiftId', 'shiftName');  // Lấy thông tin shift
+
+    const totalPages = Math.ceil(totalRecords / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        userShifts,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalRecords,
+        totalPages
+      },
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong filterUserShift:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
 module.exports = {
     GetAllUserShifts,
     CreateUserShift,
     UpdateUserShift,
     DeleteUserShift,
-    GetUserShiftsByUserIdAndDateRange
+    GetUserShiftsByUserIdAndDateRange,
+    FilterUserShift
 };
   

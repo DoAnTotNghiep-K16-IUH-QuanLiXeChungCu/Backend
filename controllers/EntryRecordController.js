@@ -692,6 +692,232 @@ const CountVehicleNonExit = async (req, res) => {
   }
 };
 
+const FilterEntryRecords = async (req, res) => {
+  try {
+    const { fromDay, toDay, useridofshift, isResident, isOut, pageNumber = 1, pageSize = 10 } = req.body;
+
+    // Kiểm tra tính hợp lệ của pageNumber và pageSize
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+      });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+
+    // Tạo điều kiện lọc
+    let matchCondition = { isDelete: false };
+
+    // Lọc theo khoảng thời gian (entryTime)
+    if (fromDay && toDay) {
+      const parsedFromDay = new Date(fromDay);
+      const parsedToDay = new Date(toDay);
+
+      if (isNaN(parsedFromDay.getTime()) || isNaN(parsedToDay.getTime())) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: 'Ngày không hợp lệ.'
+        });
+      }
+
+      // Đặt thời gian đầu ngày cho fromDay (00:00:00)
+      parsedFromDay.setHours(0, 0, 0, 0);
+
+      // Đặt thời gian cuối ngày cho toDay (23:59:59)
+      parsedToDay.setHours(23, 59, 59, 999);
+
+      matchCondition.entryTime = {
+        $gte: parsedFromDay,
+        $lte: parsedToDay
+      };
+    }
+
+    // Lọc theo ca trực của useridofshift
+    if (useridofshift) {
+      const userShift = await UserShift.findOne({ userId: useridofshift }).select('_id');
+      if (!userShift) {
+        return res.status(404).json({
+          status: 404,
+          data: null,
+          error: 'Không tìm thấy ca trực cho người dùng này.'
+        });
+      }
+      matchCondition.users_shiftId = userShift._id;
+    }
+
+    // Lọc theo tình trạng cư dân (isResident)
+    if (typeof isResident === 'boolean') {
+      matchCondition.isResident = isResident;
+    }
+
+    // Lọc theo trạng thái ra ngoài (isOut)
+    if (typeof isOut === 'boolean') {
+      matchCondition.isOut = isOut;
+    }
+
+    // Pipeline để lấy dữ liệu từ EntryRecord
+    const pipeline = [
+      { $match: matchCondition },
+      {
+        $lookup: {
+          from: 'vehicles',
+          localField: 'licensePlate',
+          foreignField: 'licensePlate',
+          as: 'vehicle'
+        }
+      },
+      { $unwind: { path: '$vehicle', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'customers',
+          localField: 'vehicle.customerId',
+          foreignField: '_id',
+          as: 'customer'
+        }
+      },
+      { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users_shift', // Liên kết với bảng users_shift
+          localField: 'users_shiftId',
+          foreignField: '_id',
+          as: 'userShift'
+        }
+      },
+      { $unwind: { path: '$userShift', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users', // Liên kết với bảng users
+          localField: 'userShift.userId',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'shift', // Liên kết với bảng shift
+          localField: 'userShift.shiftId',
+          foreignField: '_id',
+          as: 'shift'
+        }
+      },
+      { $unwind: { path: '$shift', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          'userShift.fullName': '$user.fullname',
+          'userShift.phoneNumber': '$user.phoneNumber',
+          'userShift.shiftName': '$shift.shiftName',
+          'userShift.startTime': '$shift.startTime',
+          'userShift.endTime': '$shift.endTime'
+        }
+      },
+      {
+        $lookup: {
+          from: 'exit_records',
+          localField: '_id',
+          foreignField: 'entry_recordId',
+          as: 'exitRecord'
+        }
+      },
+      { $unwind: { path: '$exitRecord', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          exitRecord: {
+            $cond: {
+              if: { $eq: ['$exitRecord', null] }, // Kiểm tra nếu exitRecord là null
+              then: {}, // Trả về đối tượng rỗng nếu không có exitRecord
+              else: '$exitRecord' // Giữ nguyên giá trị của exitRecord nếu tồn tại
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          entryRecord: {
+            id: '$_id',
+            entryTime: '$entryTime',
+            picture_front: '$picture_front',
+            picture_back: '$picture_back',
+            licensePlate: '$licensePlate',
+            isResident: '$isResident',
+            vehicleType: '$vehicleType',
+            isOut: '$isOut',
+            users_shift: {
+              fullName: '$userShift.fullName',
+              phoneNumber: '$userShift.phoneNumber',
+              shiftName: '$userShift.shiftName',
+              startTime: '$userShift.startTime',
+              endTime: '$userShift.endTime'
+            },
+            rfid: '$rfidId',
+            customer: {
+              fullName: '$customer.fullName',
+              phoneNumber: '$customer.phoneNumber',
+              address: '$customer.address',
+              isResident: '$customer.isResident'
+            }
+          },
+          exitRecord: { 
+            $ifNull: ['$exitRecord', {}] // Nếu exitRecord là null hoặc không có, trả về đối tượng rỗng
+          }
+        }
+      },
+      { $skip: skip },
+      { $limit: parsedPageSize }
+    ];
+
+    // Thực hiện truy vấn
+    const results = await EntryRecord.aggregate(pipeline);
+
+    // Đếm tổng số bản ghi
+    const totalRecords = await EntryRecord.countDocuments(matchCondition);
+
+    if (!results.length) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không có bản ghi nào được tìm thấy.'
+      });
+    }
+
+    const totalPages = Math.ceil(totalRecords / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        records: results,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalRecords,
+        totalPages
+      },
+      error: null
+    });
+  } catch (error) {
+    console.error('Lỗi trong FilterEntryRecords:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
 module.exports = {
   GetAllEntryRecords,
   GetEntryRecordById,
@@ -700,6 +926,7 @@ module.exports = {
   GetEntryRecordsByVehicleType,
   CountVehicleEntry,
   CreateEntryRecord,
-  CountVehicleNonExit
+  CountVehicleNonExit,
+  FilterEntryRecords
 };
   

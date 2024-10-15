@@ -18,5 +18,8 @@ router.delete("/UpdateUserShift", middleware.verifyToken , UserShiftController.D
 // http://localhost:3000/api/v1/userShift/GetUserShiftsByUserIdAndDateRange
 router.patch("/GetUserShiftsByUserIdAndDateRange", middleware.verifyToken , UserShiftController.GetUserShiftsByUserIdAndDateRange);
 
+// http://localhost:3000/api/v1/userShift/FilterUserShift
+router.patch("/FilterUserShift", middleware.verifyToken , UserShiftController.FilterUserShift);
+
 // API 
 module.exports = router;
