@@ -138,9 +138,19 @@ const CreateUserShift = async (req, res) => {
     // Lưu vào cơ sở dữ liệu
     await newUserShift.save();
 
+    const populatedUserShift = await UserShift.findById(newUserShift._id)
+    .populate({
+      path: 'userId',
+      select: 'username age' // Chỉ lấy các trường cần thiết từ User
+    })
+    .populate({
+      path: 'shiftId',
+      select: 'shiftName' // Chỉ lấy các trường cần thiết từ Shift
+    });
+
     return res.status(201).json({
       status: 201,
-      data: newUserShift,
+      data: populatedUserShift,
       error: null
     });
   } catch (error) {
@@ -237,9 +247,20 @@ const UpdateUserShift = async (req, res) => {
     // Lưu lại bản ghi đã cập nhật
     await userShift.save();
 
+    const populatedUserShift = await UserShift.findById(userShift._id)
+    .populate({
+      path: 'userId',
+      select: 'username age fullname' // Lấy các trường cần thiết từ User
+    })
+    .populate({
+      path: 'shiftId',
+      select: 'shiftName' // Lấy các trường cần thiết từ Shift
+    });
+
+
     return res.status(200).json({
       status: 200,
-      data: userShift,
+      data: populatedUserShift,
       error: null
     });
   } catch (error) {

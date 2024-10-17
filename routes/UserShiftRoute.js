@@ -13,7 +13,7 @@ router.post("/CreateUserShift", middleware.verifyToken , UserShiftController.Cre
 router.put("/UpdateUserShift", middleware.verifyToken , UserShiftController.UpdateUserShift);
 
 // http://localhost:3000/api/v1/userShift/UpdateUserShift
-router.delete("/UpdateUserShift", middleware.verifyToken , UserShiftController.DeleteUserShift);
+router.delete("/DeleteUserShift", middleware.verifyToken , UserShiftController.DeleteUserShift);
 
 // http://localhost:3000/api/v1/userShift/GetUserShiftsByUserIdAndDateRange
 router.patch("/GetUserShiftsByUserIdAndDateRange", middleware.verifyToken , UserShiftController.GetUserShiftsByUserIdAndDateRange);

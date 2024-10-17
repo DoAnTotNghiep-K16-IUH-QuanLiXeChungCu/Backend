@@ -193,10 +193,20 @@ const CreateResidentHistoryMoney = async (req, res) => {
          // Sử dụng populate tương tự như bạn yêu cầu
          const populatedResidentHistoryMoney = await ResidentHistoryMoney.findById(newResidentHistoryMoney._id)
          .populate({
-           path: 'vehicleId',
-           model: 'Vehicle',
-           select: 'licensePlate type brand'
-         })
+          path: 'vehicleId',
+          model: 'Vehicle',
+          populate: {
+            path: 'customerId',  // Lấy thông tin của khách hàng
+            model: 'Customer',
+            populate: {
+              path: 'apartmentsId',  // Lấy thông tin căn hộ
+              model: 'Apartment',
+              select: 'name'  // Chỉ lấy trường "name" của apartment
+            },
+            select: 'fullName phoneNumber address isResident'  // Các trường cần thiết từ Customer
+          },
+          select: 'licensePlate type brand color'  // Các trường cần thiết từ Vehicle
+        })
          .populate({
            path: 'parking_slotId',
            model: 'ParkingSlot',

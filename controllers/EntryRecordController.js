@@ -828,6 +828,14 @@ const FilterEntryRecords = async (req, res) => {
       },
       {
         $lookup: {
+          from: 'rfid_cards', // Liên kết với bảng rfid_cards
+          localField: 'rfidId',
+          foreignField: '_id',
+          as: 'rfidCard'
+        }
+      },
+      {
+        $lookup: {
           from: 'exit_records',
           localField: '_id',
           foreignField: 'entry_recordId',
@@ -864,7 +872,10 @@ const FilterEntryRecords = async (req, res) => {
               startTime: '$userShift.startTime',
               endTime: '$userShift.endTime'
             },
-            rfid: '$rfidId',
+            rfid: {
+              uuid: '$rfidCard.uuid',  // Thêm thông tin RFID từ bảng rfid_cards
+              createdAt: '$rfidCard.createdAt'
+            },
             customer: {
               fullName: '$customer.fullName',
               phoneNumber: '$customer.phoneNumber',

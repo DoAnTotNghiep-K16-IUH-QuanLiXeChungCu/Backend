@@ -4,7 +4,7 @@ const path = require('path');
 
 // Khởi tạo MinIO client
 const minioClient = new Minio.Client({
-  endPoint: '192.168.1.110',  // Thay bằng địa chỉ IP của MinIO Server
+  endPoint: '192.168.1.123',  // Thay bằng địa chỉ IP của MinIO Server
   port: 9000,                 // Cổng của MinIO Server
   useSSL: false,              // Sử dụng SSL hay không
   accessKey: 'minioadmin',    // Access key của MinIO
@@ -65,7 +65,7 @@ const UploadFile = async (req, res) => {
        }
 
      // Trả về URL của file đã upload
-     const url = `http://192.168.1.110:9000/${bucketName}/${minioFilePath}`;
+     const url = `http://192.168.1.123:9000/${bucketName}/${minioFilePath}`;
      console.log('Upload successful. File URL:', url); // Thông báo upload thành công
      return res.status(200).json({
        status: 200,
@@ -82,6 +82,7 @@ const UploadFile = async (req, res) => {
    });
  }
 };
+//D:\MinIO\minio.exe server D:\Data --console-address ":9001"
 
 module.exports = {
  UploadFile,
