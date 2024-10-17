@@ -193,39 +193,78 @@ const CreateResidentHistoryMoney = async (req, res) => {
          // Sử dụng populate tương tự như bạn yêu cầu
          const populatedResidentHistoryMoney = await ResidentHistoryMoney.findById(newResidentHistoryMoney._id)
          .populate({
-          path: 'vehicleId',
-          model: 'Vehicle',
-          populate: {
-            path: 'customerId',  // Lấy thông tin của khách hàng
-            model: 'Customer',
-            populate: {
-              path: 'apartmentsId',  // Lấy thông tin căn hộ
-              model: 'Apartment',
-              select: 'name'  // Chỉ lấy trường "name" của apartment
-            },
-            select: 'fullName phoneNumber address isResident'  // Các trường cần thiết từ Customer
-          },
-          select: 'licensePlate type brand color'  // Các trường cần thiết từ Vehicle
-        })
+           path: 'vehicleId',
+           model: 'Vehicle',
+           populate: {
+             path: 'customerId',
+             model: 'Customer',
+             populate: {
+               path: 'apartmentsId',
+               model: 'Apartment',
+               select: 'name'
+             },
+             select: 'fullName phoneNumber address isResident'
+           },
+           select: 'licensePlate type brand color'
+         })
          .populate({
            path: 'parking_slotId',
            model: 'ParkingSlot',
-           select: 'slotCode slotType availableSlots  totalQuantity'
+           select: 'slotCode slotType availableSlots totalQuantity'
          });
+ 
+       // Định dạng dữ liệu trả về theo yêu cầu
+       const formattedData = {
+         _id: populatedResidentHistoryMoney._id,
+         vehicle: {
+           _id: populatedResidentHistoryMoney.vehicleId._id,
+           customerId: populatedResidentHistoryMoney.vehicleId.customerId._id,
+           licensePlate: populatedResidentHistoryMoney.vehicleId.licensePlate,
+           type: populatedResidentHistoryMoney.vehicleId.type,
+           color: populatedResidentHistoryMoney.vehicleId.color,
+           brand: populatedResidentHistoryMoney.vehicleId.brand,
+           isDelete: false,
+           customer: {
+             _id: populatedResidentHistoryMoney.vehicleId.customerId._id,
+             apartmentsId: populatedResidentHistoryMoney.vehicleId.customerId.apartmentsId._id,
+             fullName: populatedResidentHistoryMoney.vehicleId.customerId.fullName,
+             phoneNumber: populatedResidentHistoryMoney.vehicleId.customerId.phoneNumber,
+             isResident: populatedResidentHistoryMoney.vehicleId.customerId.isResident,
+             address: populatedResidentHistoryMoney.vehicleId.customerId.address,
+             isDelete: false,
+             apartment: {
+               _id: populatedResidentHistoryMoney.vehicleId.customerId.apartmentsId._id,
+               name: populatedResidentHistoryMoney.vehicleId.customerId.apartmentsId.name
+             }
+           }
+         },
+         parkingSlot: {
+           _id: populatedResidentHistoryMoney.parking_slotId._id,
+           slotCode: populatedResidentHistoryMoney.parking_slotId.slotCode,
+           slotType: populatedResidentHistoryMoney.parking_slotId.slotType,
+           availableSlots: populatedResidentHistoryMoney.parking_slotId.availableSlots,
+           totalQuantity: populatedResidentHistoryMoney.parking_slotId.totalQuantity
+         },
+         monthlyFee: populatedResidentHistoryMoney.monthlyFee,
+         startDate: populatedResidentHistoryMoney.startDate,
+         endDate: populatedResidentHistoryMoney.endDate,
+         isDelete: populatedResidentHistoryMoney.isDelete,
+         __v: populatedResidentHistoryMoney.__v
+       };
  
        return res.status(201).json({
            status: 201,
-           data: populatedResidentHistoryMoney,
+           data: formattedData,
            error: null
        });
-   } catch (error) {
-       console.error('Lỗi không xác định trong CreateResidentHistoryMoney:', error);
-       return res.status(500).json({
-           status: 500,
-           data: null,
-           error: 'Lỗi máy chủ không xác định.'
-       });
-   }
+    } catch (error) {
+        console.error('Lỗi không xác định trong CreateResidentHistoryMoney:', error);
+        return res.status(500).json({
+            status: 500,
+            data: null,
+            error: 'Lỗi máy chủ không xác định.'
+        });
+    }
  };
 
 const UpdateResidentHistoryMoney = async (req, res) => {

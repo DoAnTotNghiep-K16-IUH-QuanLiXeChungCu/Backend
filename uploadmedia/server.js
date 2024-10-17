@@ -1,19 +1,21 @@
+require('dotenv').config();
 const Minio = require('minio');
 const multer = require('multer');
 const path = require('path');
 
-// Khởi tạo MinIO client
+// Khởi tạo MinIO client với thông tin từ .env
 const minioClient = new Minio.Client({
-  endPoint: '192.168.1.123',  // Thay bằng địa chỉ IP của MinIO Server
-  port: 9000,                 // Cổng của MinIO Server
-  useSSL: false,              // Sử dụng SSL hay không
-  accessKey: 'minioadmin',    // Access key của MinIO
-  secretKey: 'minioadmin'     // Secret key của MinIO
+  endPoint: process.env.MINIO_ENDPOINT,  
+  port: parseInt(process.env.MINIO_PORT),
+  useSSL: process.env.MINIO_USE_SSL === 'true',
+  accessKey: process.env.MINIO_ACCESS_KEY,
+  secretKey: process.env.MINIO_SECRET_KEY  
 });
 
 // Kiểm tra hoặc tạo bucket nếu chưa tồn tại
-const bucketName = 'doankhoaluan';
-const folderName = 'image';
+const bucketName = process.env.MINIO_BUCKET_NAME;
+const folderName = process.env.MINIO_FOLDER_NAME;
+
 minioClient.bucketExists(bucketName, (err) => {
   if (err) {
     console.log('Bucket does not exist, trying to create...');
@@ -50,41 +52,42 @@ const UploadFile = async (req, res) => {
 
     const filePath = path.join(__dirname, '../', file.path);
 
-     // Đặt tên file trong MinIO bao gồm cả đường dẫn thư mục
-     const minioFilePath = `${folderName}/${file.originalname}`;  // Thêm tên thư mục vào trước tên file
+    // Đặt tên file trong MinIO bao gồm cả đường dẫn thư mục
+    const minioFilePath = `${folderName}/${file.originalname}`;  // Thêm tên thư mục vào trước tên file
 
-     // Upload file lên MinIO
-     minioClient.fPutObject(bucketName, minioFilePath, filePath, metaData, (err, etag) => {
-       if (err) {
-         console.error('Upload to MinIO failed:', err);
-         return res.status(500).json({
-           status: 500,
-           data: null,
-           error: 'Upload failed. Error: ' + err.message
-         });
-       }
+    // Upload file lên MinIO
+    minioClient.fPutObject(bucketName, minioFilePath, filePath, metaData, (err, etag) => {
+      if (err) {
+        console.error('Upload to MinIO failed:', err);
+        return res.status(500).json({
+          status: 500,
+          data: null,
+          error: 'Upload failed. Error: ' + err.message
+        });
+      }
 
-     // Trả về URL của file đã upload
-     const url = `http://192.168.1.123:9000/${bucketName}/${minioFilePath}`;
-     console.log('Upload successful. File URL:', url); // Thông báo upload thành công
-     return res.status(200).json({
-       status: 200,
-       data: { url },
-       error: null
-     });
-   });
- } catch (error) {
-   console.error('Lỗi trong UploadFile:', error);
-   return res.status(500).json({
-     status: 500,
-     data: null,
-     error: 'Lỗi máy chủ không xác định.'
-   });
- }
+      // Trả về URL của file đã upload
+      const url = `${process.env.MINIO_SERVER_URL}/${bucketName}/${minioFilePath}`;
+      console.log('Upload successful. File URL:', url); // Thông báo upload thành công
+      return res.status(200).json({
+        status: 200,
+        data: { url },
+        error: null
+      });
+    });
+  } catch (error) {
+    console.error('Lỗi trong UploadFile:', error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
 };
-//D:\MinIO\minio.exe server D:\Data --console-address ":9001"
 
 module.exports = {
- UploadFile,
- upload
+  UploadFile,
+  upload
 };
+
+//D:\MinIO\minio.exe server D:\Data --console-address ":9001"
