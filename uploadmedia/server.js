@@ -18,7 +18,6 @@ const folderName = process.env.MINIO_FOLDER_NAME;
 
 minioClient.bucketExists(bucketName, (err) => {
   if (err) {
-    console.log('Bucket does not exist, trying to create...');
     minioClient.makeBucket(bucketName, 'us-east-1', function(err) {
       if (err) {
         console.log('Error creating bucket.', err);
@@ -34,6 +33,11 @@ minioClient.bucketExists(bucketName, (err) => {
 // Cấu hình multer để upload file
 const upload = multer({ dest: 'uploads/' });
 
+// Tạo một chuỗi ngẫu nhiên
+const generateRandomString = () => {
+  return Math.random().toString(36).substring(2, 10); // Chuỗi ngẫu nhiên 8 ký tự
+};
+
 // Controller xử lý việc upload file
 const UploadFile = async (req, res) => {
   try {
@@ -45,15 +49,17 @@ const UploadFile = async (req, res) => {
         error: 'Không tìm thấy file để upload.'
       });
     }
-    console.log('Received file:', file);
     const metaData = {
       'Content-Type': file.mimetype
     };
 
     const filePath = path.join(__dirname, '../', file.path);
 
-    // Đặt tên file trong MinIO bao gồm cả đường dẫn thư mục
-    const minioFilePath = `${folderName}/${file.originalname}`;  // Thêm tên thư mục vào trước tên file
+    // Tạo chuỗi ngẫu nhiên
+    const randomString = generateRandomString();
+
+    // Đặt tên file trong MinIO bao gồm cả chuỗi ngẫu nhiên trong đường dẫn
+    const minioFilePath = `${folderName}/${randomString}/${file.originalname}`;  // Chèn chuỗi ngẫu nhiên vào đường dẫn
 
     // Upload file lên MinIO
     minioClient.fPutObject(bucketName, minioFilePath, filePath, metaData, (err, etag) => {
@@ -68,7 +74,6 @@ const UploadFile = async (req, res) => {
 
       // Trả về URL của file đã upload
       const url = `${process.env.MINIO_SERVER_URL}/${bucketName}/${minioFilePath}`;
-      console.log('Upload successful. File URL:', url); // Thông báo upload thành công
       return res.status(200).json({
         status: 200,
         data: { url },
@@ -89,5 +94,3 @@ module.exports = {
   UploadFile,
   upload
 };
-
-//D:\MinIO\minio.exe server D:\Data --console-address ":9001"
