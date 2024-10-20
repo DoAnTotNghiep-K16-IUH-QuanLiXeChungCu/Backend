@@ -95,3 +95,7 @@ module.exports = {
   UploadFile,
   upload
 };
+// cài 
+// PS> Invoke-WebRequest -Uri "https://dl.min.io/server/minio/release/windows-amd64/minio.exe" -OutFile "D:\MinIO\minio.exe"
+// chạy
+//D:\MinIO\minio.exe server D:\Data --console-address ":9001"
