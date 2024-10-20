@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const { initSerialPort } = require("./scancard/server");
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
@@ -26,6 +27,7 @@ const UserShiftRoute = require("./routes/UserShiftRoute");
 const VisitorHistoryMoneyRoute = require("./routes/VisitorHistoryMoneyRoute");
 const ApartmentRoute = require("./routes/ApartmentRoute");
 const UploadRoute = require("./routes/UploadRoute");
+const SerialRoute = require("./routes/SerialRoutes");
 
 // middleware
 app.use(express.static(path.join(__dirname, "public")));
@@ -57,6 +59,13 @@ app.use("/api/v1/userShift", UserShiftRoute);
 app.use("/api/v1/visitorHistoryMoney", VisitorHistoryMoneyRoute);
 app.use("/api/v1/apartment", ApartmentRoute);
 app.use("/api/v1/upload", UploadRoute); 
+app.use("/api/v1/serial", SerialRoute);
+
+const serialPortPath = process.env.SERIAL_PORT_PATH || "COM5";
+
+console.log("Serial port path: ", serialPortPath);
+const baudRate = parseInt(process.env.BAUD_RATE) || 9600;
+initSerialPort(serialPortPath, baudRate);
 
 app.use(function (req, res) {
   res.status(404).send("Not found");
