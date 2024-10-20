@@ -81,16 +81,23 @@ const GetAllEntryRecords = async (req, res) => {
       });
     }
 
+    // Cập nhật để trả về đường dẫn ảnh đầy đủ
+    const updatedRecords = records.map(record => ({
+      ...record.toObject(),
+      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
+      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+    }));
+
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
 
     return res.status(200).json({
       status: 200,
       data: {
-        records,   
-        currentPage: parsedPageNumber,  
-        pageSize: parsedPageSize,   
-        totalRecords,   
-        totalPages    
+        records: updatedRecords,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalRecords,
+        totalPages
       },
       error: null
     });
@@ -146,6 +153,9 @@ const GetEntryRecordById = async (req, res) => {
         error: 'Không tìm thấy bản ghi EntryRecord với id này.'
       });
     }
+
+    entryRecord.picture_front = entryRecord.picture_front ? `${process.env.MINIO_SERVER_URL}${entryRecord.picture_front}` : '';
+    entryRecord.picture_back = entryRecord.picture_back ? `${process.env.MINIO_SERVER_URL}${entryRecord.picture_back}` : '';
 
     return res.status(200).json({
       status: 200,
@@ -232,10 +242,16 @@ const GetEntryRecordByLicensePlate = async (req, res) => {
 
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
 
+    const updatedRecords = entryRecords.map(record => ({
+      ...record.toObject(),
+      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
+      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+    }));
+
     return res.status(200).json({
       status: 200,
       data: {
-        entryRecords,
+        entryRecords: updatedRecords,
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
@@ -347,19 +363,25 @@ const GetEntryRecordsByDateRange = async (req, res) => {
       .skip(skip)
       .limit(parsedPageSize);
 
-    const totalPages = Math.ceil(totalRecords / parsedPageSize);
-
-    return res.status(200).json({
-      status: 200,
-      data: {
-        records,
-        currentPage: parsedPageNumber,
-        pageSize: parsedPageSize,
-        totalRecords,
-        totalPages
-      },
-      error: null
-    });
+      const updatedRecords = records.map(record => ({
+        ...record.toObject(),
+        picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
+        picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+      }));
+  
+      const totalPages = Math.ceil(totalRecords / parsedPageSize);
+  
+      return res.status(200).json({
+        status: 200,
+        data: {
+          records: updatedRecords,
+          currentPage: parsedPageNumber,
+          pageSize: parsedPageSize,
+          totalRecords,
+          totalPages
+        },
+        error: null
+      });
   } catch (error) {
     console.error('Lỗi không xác định trong GetEntryRecordsByDateRange:', error);
     return res.status(500).json({
@@ -430,19 +452,25 @@ const GetEntryRecordsByVehicleType = async (req, res) => {
       .skip(skip)
       .limit(parsedPageSize);
 
-    const totalPages = Math.ceil(totalRecords / parsedPageSize);
-
-    return res.status(200).json({
-      status: 200,
-      data: {
-        records,
-        currentPage: parsedPageNumber,
-        pageSize: parsedPageSize,
-        totalRecords,
-        totalPages
-      },
-      error: null
-    });
+      const updatedRecords = records.map(record => ({
+        ...record.toObject(),
+        picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
+        picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+      }));
+  
+      const totalPages = Math.ceil(totalRecords / parsedPageSize);
+  
+      return res.status(200).json({
+        status: 200,
+        data: {
+          records: updatedRecords,
+          currentPage: parsedPageNumber,
+          pageSize: parsedPageSize,
+          totalRecords,
+          totalPages
+        },
+        error: null
+      });
   } catch (error) {
     console.error('Lỗi trong GetEntryRecordsByVehicleType:', error);
     return res.status(500).json({
@@ -613,17 +641,26 @@ const CreateEntryRecord = async (req, res) => {
       });
     }
 
+    // Lấy phần đường dẫn tương đối từ URL
+    const extractRelativePath = (url) => {
+      const serverUrl = process.env.MINIO_SERVER_URL; // Lấy URL server từ biến môi trường
+      return url.replace(serverUrl, ''); // Loại bỏ URL của MinIO, chỉ giữ lại phần đường dẫn
+    };
+
+    const relativePictureFront = extractRelativePath(picture_front);
+    const relativePictureBack = extractRelativePath(picture_back);
+
     // Tạo bản ghi EntryRecord mới
     const newEntryRecord = new EntryRecord({
       entryTime,
-      picture_front,
-      picture_back,
+      picture_front: relativePictureFront, // Lưu phần đường dẫn tương đối
+      picture_back: relativePictureBack,   // Lưu phần đường dẫn tương đối
       licensePlate,
       isResident,
       vehicleType,
       users_shiftId,
       rfidId,
-      isOut: false // Mặc định khi vào bãi xe là chưa ra
+      isOut: false, // Mặc định khi vào bãi xe là chưa ra
     });
 
     // Lưu bản ghi vào cơ sở dữ liệu
@@ -859,8 +896,20 @@ const FilterEntryRecords = async (req, res) => {
           entryRecord: {
             id: '$_id',
             entryTime: '$entryTime',
-            picture_front: '$picture_front',
-            picture_back: '$picture_back',
+            picture_front: {
+              $cond: {
+                if: { $not: ['$picture_front'] },
+                then: '',
+                else: { $concat: [process.env.MINIO_SERVER_URL, '$picture_front'] }
+              }
+            },
+            picture_back: {
+              $cond: {
+                if: { $not: ['$picture_back'] },
+                then: '',
+                else: { $concat: [process.env.MINIO_SERVER_URL, '$picture_back'] }
+              }
+            },
             licensePlate: '$licensePlate',
             isResident: '$isResident',
             vehicleType: '$vehicleType',

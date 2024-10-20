@@ -25,7 +25,7 @@ router.patch("/GetExitRecordsByVehicleType", middleware.verifyToken , ExitRecord
 router.patch("/CountVehicleExitRecord", middleware.verifyToken , ExitRecordController.CountVehicleExitRecord);
 
 // http://localhost:3000/api/v1/exitRecord/CreateExitRecord
-router.post("/CreateExitRecord", middleware.verifyToken , ExitRecordController.CreateExitRecord);
+router.post("/CreateExitRecord", ExitRecordController.CreateExitRecord);
 
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

@@ -73,7 +73,8 @@ const UploadFile = async (req, res) => {
       }
 
       // Trả về URL của file đã upload
-      const url = `${process.env.MINIO_SERVER_URL}/${bucketName}/${minioFilePath}`;
+      const url = `${process.env.MINIO_SERVER_URL.replace(/\/$/, '')}/${bucketName}/${minioFilePath}`;
+
       return res.status(200).json({
         status: 200,
         data: { url },

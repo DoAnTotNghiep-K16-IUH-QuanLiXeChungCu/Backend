@@ -22,7 +22,7 @@ router.patch("/GetEntryRecordsByVehicleType", middleware.verifyToken , EntryReco
 router.patch("/CountVehicleEntry", middleware.verifyToken , EntryRecordController.CountVehicleEntry);
 
 // http://localhost:3000/api/v1/entryRecord/CreateEntryRecord
-router.post("/CreateEntryRecord", middleware.verifyToken , EntryRecordController.CreateEntryRecord);
+router.post("/CreateEntryRecord",EntryRecordController.CreateEntryRecord);
 
 // http://localhost:3000/api/v1/entryRecord/CountVehicleNonExit
 router.get("/CountVehicleNonExit", middleware.verifyToken , EntryRecordController.CountVehicleNonExit);

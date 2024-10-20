@@ -62,14 +62,18 @@ const GetAllExitRecords = async (req, res) => {
       });
     }
 
-    // Tính tổng số trang
+    const updatedRecords = records.map(record => ({
+      ...record.toObject(),
+      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
+      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+    }));
+
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
 
-    // Trả về dữ liệu thành công
     return res.status(200).json({
       status: 200,
       data: {
-        records,
+        records: updatedRecords,
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
@@ -115,10 +119,15 @@ const GetExitRecordById = async (req, res) => {
         error: 'Không tìm thấy bản ghi ExitRecord với id này.'
       });
     }
+    const updatedExitRecord = {
+      ...exitRecord.toObject(),
+      picture_front: exitRecord.picture_front ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_front}` : '',
+      picture_back: exitRecord.picture_back ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_back}` : ''
+    };
 
     return res.status(200).json({
       status: 200,
-      data: exitRecord,
+      data: updatedExitRecord,
       error: null
     });
   } catch (error) {
@@ -159,9 +168,15 @@ const GetExitRecordByEntryRecordId = async (req, res) => {
       });
     }
 
+    const updatedExitRecord = {
+      ...exitRecord.toObject(),
+      picture_front: exitRecord.picture_front ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_front}` : '',
+      picture_back: exitRecord.picture_back ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_back}` : ''
+    };
+
     return res.status(200).json({
       status: 200,
-      data: exitRecord,
+      data: updatedExitRecord,
       error: null
     });
   } catch (error) {
@@ -322,19 +337,25 @@ const GetExitRecordsByDateRange = async (req, res) => {
       .skip(skip)
       .limit(parsedPageSize);
 
-      const totalPages = Math.ceil(totalRecords / parsedPageSize);
+    const updatedRecords = exitRecords.map(record => ({
+      ...record.toObject(),
+      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
+      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+    }));
 
-      return res.status(200).json({
-          status: 200,
-          data: {
-            records,
-            currentPage: parsedPageNumber,
-            pageSize: parsedPageSize,
-            totalRecords,
-            totalPages
-          },
-          error: null
-      });
+    const totalPages = Math.ceil(totalRecords / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        exitRecords: updatedRecords,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalRecords,
+        totalPages
+      },
+      error: null
+    });
   } catch (error) {
       console.error(`Lỗi không xác định trong GetExitRecordsByDateRange từ ExitRecord:`, error);
       return res.status(500).json({
@@ -381,12 +402,18 @@ const GetExitRecordsByVehicleType = async (req, res) => {
       .skip(skip)
       .limit(parsedPageSize);
 
+   const updatedRecords = records.map(record => ({
+      ...record.toObject(),
+      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
+      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+    }));
+
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
 
     return res.status(200).json({
       status: 200,
       data: {
-        exitRecords,
+        records: updatedRecords,
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
@@ -600,6 +627,15 @@ const CreateExitRecord = async (req, res) => {
       });
     }
 
+    // Hàm cắt URL, giữ lại đường dẫn tương đối
+    const extractRelativePath = (url) => {
+      const serverUrl = process.env.MINIO_SERVER_URL; // Lấy URL server từ biến môi trường
+      return url.replace(serverUrl, ''); // Loại bỏ URL của MinIO, chỉ giữ lại phần đường dẫn
+    };
+
+    const relativePictureFront = extractRelativePath(picture_front);
+    const relativePictureBack = extractRelativePath(picture_back);
+
    // Tính thời gian đỗ xe
    const duration = Math.abs(new Date(exitTime) - new Date(entryRecord.entryTime));
    const hoursParked = Math.ceil(duration / (1000 * 60 * 60)); // Làm tròn lên theo giờ
@@ -613,14 +649,14 @@ const CreateExitRecord = async (req, res) => {
 
    // Tạo bản ghi ExitRecord mới
    const newExitRecord = new ExitRecord({
-     entry_recordId,
-     exitTime,
-     picture_front,
-     picture_back,
-     licensePlate,
-     isResident,
-     vehicleType
-   });
+    entry_recordId,
+    exitTime,
+    picture_front: relativePictureFront,  // Lưu phần đường dẫn tương đối
+    picture_back: relativePictureBack,    // Lưu phần đường dẫn tương đối
+    licensePlate,
+    isResident,
+    vehicleType
+  });
 
    // Lưu bản ghi vào cơ sở dữ liệu
    await newExitRecord.save();
