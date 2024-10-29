@@ -923,7 +923,7 @@ db.rfid_cards.insertMany([
     createdAt: ISODate("2024-01-02T00:00:00.000Z"),
   },
 ]);
-db.users.insertOne({
+db.setting.insertOne({
   _id: ObjectId("69aae4843ae33121e0de8501"),
   entryPort: "COM5",
   entryBau: 9600,

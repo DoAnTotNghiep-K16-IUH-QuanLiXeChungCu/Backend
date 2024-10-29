@@ -27,6 +27,7 @@ const VisitorHistoryMoneyRoute = require("./routes/VisitorHistoryMoneyRoute");
 const ApartmentRoute = require("./routes/ApartmentRoute");
 const UploadRoute = require("./routes/UploadRoute");
 const ReadRFIDRoute = require("./routes/readRFIDRoute");
+const SettingRoute = require("./routes/SettingRoute");
 const corsOptions = {
   origin: "http://localhost:3000", // Nguồn được phép
   credentials: true, // Cho phép gửi thông tin xác thực
@@ -62,6 +63,7 @@ app.use("/api/v1/visitorHistoryMoney", VisitorHistoryMoneyRoute);
 app.use("/api/v1/apartment", ApartmentRoute);
 app.use("/api/v1/upload", UploadRoute);
 app.use("/api/v1/readRFID", ReadRFIDRoute);
+app.use("/api/v1/setting", SettingRoute);
 
 app.use(function (req, res) {
   res.status(404).send("Not found");

@@ -102,8 +102,17 @@ const GetSettingByID = async (req, res) => {
 
 const UpdateSetting = async (req, res) => {
   try {
-    const { id, apartmentsId, fullName, phoneNumber, address, isResident } =
-      req.body;
+    const {
+      id,
+      entryPort,
+      entryBau,
+      exitPort,
+      exitBau,
+      camera1,
+      camera2,
+      camera3,
+      camera4,
+    } = req.body;
 
     // Kiểm tra id hợp lệ
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -114,66 +123,36 @@ const UpdateSetting = async (req, res) => {
       });
     }
 
-    const customer = await Customer.findById(id);
+    const setting = await Setting.findById(id);
 
-    if (!customer || customer.isDelete) {
+    if (!setting) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: "Không tìm thấy khách hàng với ID này.",
+        error: "Không tìm thấy Setting với ID này.",
       });
     }
 
-    // Kiểm tra số điện thoại phải có từ 10 đến 11 số
-    if (phoneNumber) {
-      const phoneRegex = /^\d{10,11}$/;
-      if (!phoneRegex.test(phoneNumber)) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: "Số điện thoại phải có từ 10 đến 11 chữ số.",
-        });
-      }
-    }
-
-    // Kiểm tra logic của isResident để xác định apartmentsId và address
-    if (isResident) {
-      if (!apartmentsId || !mongoose.Types.ObjectId.isValid(apartmentsId)) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error:
-            "apartmentsId không hợp lệ hoặc không được cung cấp cho cư dân.",
-        });
-      }
-      customer.apartmentsId = apartmentsId;
-      customer.address = ""; // Cư dân không cần địa chỉ
-    } else {
-      customer.apartmentsId = undefined; // Gán undefined cho apartmentsId nếu không phải cư dân
-      customer.address = address || ""; // Cập nhật địa chỉ nếu không phải cư dân
-    }
-
-    // Cập nhật các trường khác
-    customer.fullName = fullName || customer.fullName;
-    customer.phoneNumber = phoneNumber || customer.phoneNumber;
-    customer.isResident = isResident;
+    // Cập nhật các trường cần thiết
+    setting.entryPort = entryPort || setting.entryPort;
+    setting.entryBau = entryBau || setting.entryBau;
+    setting.exitPort = exitPort || setting.exitPort;
+    setting.exitBau = exitBau || setting.exitBau;
+    setting.camera1 = camera1 || setting.camera1;
+    setting.camera2 = camera2 || setting.camera2;
+    setting.camera3 = camera3 || setting.camera3;
+    setting.camera4 = camera4 || setting.camera4;
 
     // Lưu lại bản ghi đã cập nhật
-    await customer.save();
-
-    const updatedCustomer = await Customer.findById(customer._id).populate({
-      path: "apartmentsId", // Populate apartmentsId
-      model: "Apartment", // Model là Apartment
-      select: "name", // Chỉ lấy trường name của Apartment
-    });
+    await setting.save();
 
     return res.status(200).json({
       status: 200,
-      data: updatedCustomer,
+      data: setting,
       error: null,
     });
   } catch (error) {
-    console.error("Lỗi trong UpdateCustomer:", error);
+    console.error("Lỗi trong UpdateSetting:", error);
     return res.status(500).json({
       status: 500,
       data: null,
