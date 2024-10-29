@@ -1,4 +1,3 @@
-
 use("QLXCC");
 // Tạo bảng apartments
 db.createCollection("apartments");
@@ -26,6 +25,7 @@ db.createCollection("users_shift");
 db.createCollection("shift");
 // Tạo bảng rfid_cards
 db.createCollection("rfid_cards");
+db.createCollection("setting");
 
 db.users.insertMany([
   {
@@ -45,7 +45,7 @@ db.users.insertMany([
     age: 22,
     address: "Dong Nai",
     phoneNumber: "0123456789",
-  }
+  },
 ]);
 
 db.shift.insertMany([
@@ -80,26 +80,26 @@ db.users_shift.insertMany([
     _id: ObjectId("69aae9843ae33121e0de8541"),
     userId: ObjectId("69aae4843ae33121e0de8502"),
     shiftId: ObjectId("69aae9843ae33121e0de8501"),
-    dateTime:   ISODate("2024-01-01"),
+    dateTime: ISODate("2024-01-01"),
   },
   {
     _id: ObjectId("69aae9843ae33121e0de8532"),
     userId: ObjectId("69aae4843ae33121e0de8501"),
-    shiftId : ObjectId("69aae9843ae33121e0de8502"),
-    dateTime:   ISODate("2024-01-01"),
+    shiftId: ObjectId("69aae9843ae33121e0de8502"),
+    dateTime: ISODate("2024-01-01"),
   },
   {
     _id: ObjectId("69aae9843ae33121e0de8523"),
     userId: ObjectId("69aae4843ae33121e0de8501"),
     shiftId: ObjectId("69aae9843ae33121e0de8503"),
-    dateTime:   ISODate("2024-01-01"),
+    dateTime: ISODate("2024-01-01"),
   },
   {
     _id: ObjectId("69aae9843ae33121e0de8514"),
     userId: ObjectId("69aae4843ae33121e0de8502"),
     shiftId: ObjectId("69aae9843ae33121e0de8504"),
-    dateTime:   ISODate("2024-01-01"),
-  }
+    dateTime: ISODate("2024-01-01"),
+  },
 ]);
 
 db.apartments.insertMany([
@@ -177,31 +177,31 @@ db.parking_slots.insertMany([
   {
     _id: ObjectId("61aae4843a444431e0de8505"),
     slotCode: "A",
-    slotType : "motor",
+    slotType: "motor",
     availableSlots: 49,
     totalQuantity: 50,
   },
   {
     _id: ObjectId("61aae4843a444431e0de8506"),
     slotCode: "B",
-    slotType : "motor",
+    slotType: "motor",
     availableSlots: 49,
     totalQuantity: 50,
   },
   {
     _id: ObjectId("61aae4843a444431e0de8507"),
     slotCode: "C",
-    slotType : "motor",
+    slotType: "motor",
     availableSlots: 48,
     totalQuantity: 50,
   },
   {
     _id: ObjectId("61aae4843a444431e0de8508"),
     slotCode: "D",
-    slotType : "motor",
+    slotType: "motor",
     availableSlots: 50,
     totalQuantity: 50,
-  }
+  },
 ]);
 
 db.parking_rates.insertMany([
@@ -240,7 +240,7 @@ db.parking_rates.insertMany([
     vehicleType: "car",
     hourly: 24,
     price: 140000,
-  }
+  },
 ]);
 
 db.customers.insertMany([
@@ -250,7 +250,7 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn A",
     phoneNumber: "0123456589",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
@@ -259,7 +259,7 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn B",
     phoneNumber: "0193456789",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
@@ -268,7 +268,7 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn C",
     phoneNumber: "0123356789",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
@@ -277,7 +277,7 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn D",
     phoneNumber: "0123456729",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
@@ -286,7 +286,7 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn E",
     phoneNumber: "0123496789",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
@@ -295,7 +295,7 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn F",
     phoneNumber: "0143456789",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
@@ -304,7 +304,7 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn G",
     phoneNumber: "0123256789",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
@@ -313,27 +313,27 @@ db.customers.insertMany([
     fullName: "Nguyễn Văn H",
     phoneNumber: "0127456789",
     isResident: true,
-    address: '',
+    address: "",
     isDelete: false,
   },
   {
     _id: ObjectId("63aae48436542431e0de8509"),
-    apartmentsId: '',
+    apartmentsId: "",
     fullName: "Nguyễn Văn I",
     phoneNumber: "0123496789",
     isResident: false,
-    address: '123 Đường ABC, Quận 1, TP. HCM',
+    address: "123 Đường ABC, Quận 1, TP. HCM",
     isDelete: false,
   },
   {
     _id: ObjectId("63aae48436542431e0de8510"),
-    apartmentsId: '',
+    apartmentsId: "",
     fullName: "Nguyễn Văn K",
     phoneNumber: "0123456789",
     isResident: false,
-    address: '456 Đường XYZ, Quận 5, TP. HCM',
+    address: "456 Đường XYZ, Quận 5, TP. HCM",
     isDelete: false,
-  }
+  },
 ]);
 
 db.vehicles.insertMany([
@@ -342,7 +342,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8501"),
     licensePlate: "51A-12345",
     type: "car",
-    color : "red",
+    color: "red",
     brand: "Toyota",
     isDelete: false,
   },
@@ -351,7 +351,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8502"),
     licensePlate: "51A-12346",
     type: "motor",
-    color : "white",
+    color: "white",
     brand: "Honda",
     isDelete: false,
   },
@@ -360,7 +360,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8503"),
     licensePlate: "51A-12347",
     type: "car",
-    color : "black",
+    color: "black",
     brand: "Toyota",
     isDelete: false,
   },
@@ -369,7 +369,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8504"),
     licensePlate: "51A-12348",
     type: "motor",
-    color : "red",
+    color: "red",
     brand: "Yamaha",
     isDelete: false,
   },
@@ -378,7 +378,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8505"),
     licensePlate: "51A-12349",
     type: "car",
-    color : "red",
+    color: "red",
     brand: "Kia",
     isDelete: false,
   },
@@ -387,7 +387,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8506"),
     licensePlate: "51A-12310",
     type: "car",
-    color : "red",
+    color: "red",
     brand: "Toyota",
     isDelete: false,
   },
@@ -396,7 +396,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8507"),
     licensePlate: "51A-12311",
     type: "car",
-    color : "red",
+    color: "red",
     brand: "Kia",
     isDelete: false,
   },
@@ -405,7 +405,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8508"),
     licensePlate: "51A-12312",
     type: "motor",
-    color : "red",
+    color: "red",
     brand: "Yamaha",
     isDelete: false,
   },
@@ -414,7 +414,7 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8509"),
     licensePlate: "51A-12313",
     type: "car",
-    color : "red",
+    color: "red",
     brand: "Toyota",
     isDelete: false,
   },
@@ -423,16 +423,16 @@ db.vehicles.insertMany([
     customerId: ObjectId("63aae48436542431e0de8510"),
     licensePlate: "51A-12314",
     type: "motor",
-    color : "white",
+    color: "white",
     brand: "honda",
     isDelete: false,
-  }
+  },
 ]);
 
 db.resident_history_moneys.insertMany([
   {
     _id: ObjectId("65aae48436542431e0de8501"),
-    vehicleId: ObjectId("64aae48436542431e0de8501"),//car
+    vehicleId: ObjectId("64aae48436542431e0de8501"), //car
     parking_slotId: ObjectId("61aae4843a444431e0de8501"),
     monthlyFee: 500000,
     startDate: ISODate("2024-01-01"),
@@ -460,7 +460,7 @@ db.resident_history_moneys.insertMany([
   {
     _id: ObjectId("65aae48436542431e0de8504"),
     vehicleId: ObjectId("64aae48436542431e0de8504"),
-    parking_slotId: ObjectId("61aae4843a444431e0de8506"),   //motor
+    parking_slotId: ObjectId("61aae4843a444431e0de8506"), //motor
     monthlyFee: 150000,
     startDate: ISODate("2024-01-01"),
     endDate: ISODate("2024-02-01"),
@@ -478,7 +478,7 @@ db.resident_history_moneys.insertMany([
   {
     _id: ObjectId("65aae48436542431e0de8506"),
     vehicleId: ObjectId("64aae48436542431e0de8506"),
-    parking_slotId: ObjectId("61aae4843a444431e0de8504"),   //car 
+    parking_slotId: ObjectId("61aae4843a444431e0de8504"), //car
     monthlyFee: 500000,
     startDate: ISODate("2024-02-01"),
     endDate: ISODate("2024-03-01"),
@@ -519,140 +519,160 @@ db.resident_history_moneys.insertMany([
     startDate: ISODate("2024-02-01"),
     endDate: ISODate("2024-03-01"),
     isDelete: false,
-  }
+  },
 ]);
 
 db.entry_records.insertMany([
   {
     _id: ObjectId("66aae42226542431e0de8501"),
     entryTime: ISODate("2024-01-01T08:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12345",
     isResident: true,
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
-    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),  
-    isDelete: false
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8502"),
     entryTime: ISODate("2024-01-01T09:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12346",
     isResident: true,
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
-    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"), 
-    isDelete: false
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8503"),
     entryTime: ISODate("2024-01-01T10:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12347",
     isResident: false,
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8523"),
     rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
-    isDelete: false
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8504"),
     entryTime: ISODate("2024-01-01T11:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12348",
     isResident: false,
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8514"),
     rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
-    isDelete: false
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8505"),
     entryTime: ISODate("2024-01-01T12:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12349",
     isResident: true,
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
     rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
-    isDelete: false
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8506"),
     entryTime: ISODate("2024-01-01T13:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12310",
     isResident: true,
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
     rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
-    isDelete: false
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8507"),
     entryTime: ISODate("2024-01-01T14:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12311",
     isResident: false,
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8523"),
     rfidId: ObjectId("69b8e3ff3ae33121e0de8502"),
-    isDelete: false
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8508"),
     entryTime: ISODate("2024-01-01T15:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12312",
     isResident: false,
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8514"),
     rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
-    isDelete: false
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8509"),
     entryTime: ISODate("2024-01-01T16:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12313",
     isResident: true,
     vehicleType: "car",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8541"),
     rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
-    isDelete: false
+    isDelete: false,
   },
   {
     _id: ObjectId("66aae42226542431e0de8510"),
     entryTime: ISODate("2024-01-01T17:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12314",
     isResident: true,
     vehicleType: "motor",
     isOut: true,
     users_shiftId: ObjectId("69aae9843ae33121e0de8532"),
-    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"), 
-    isDelete: false
-  }
+    rfidId: ObjectId("69b8e3ff3ae33121e0de8501"),
+    isDelete: false,
+  },
 ]);
 
 db.exit_records.insertMany([
@@ -660,8 +680,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8501"),
     entry_recordId: ObjectId("66aae42226542431e0de8501"),
     exitTime: ISODate("2024-01-01T09:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12345",
     isResident: true,
     vehicleType: "car",
@@ -671,8 +693,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8502"),
     entry_recordId: ObjectId("66aae42226542431e0de8502"),
     exitTime: ISODate("2024-01-01T10:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12346",
     isResident: true,
     vehicleType: "motor",
@@ -682,8 +706,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8503"),
     entry_recordId: ObjectId("66aae42226542431e0de8503"),
     exitTime: ISODate("2024-01-01T11:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12347",
     isResident: false,
     vehicleType: "car",
@@ -693,8 +719,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8504"),
     entry_recordId: ObjectId("66aae42226542431e0de8504"),
     exitTime: ISODate("2024-01-01T12:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12348",
     isResident: false,
     vehicleType: "motor",
@@ -704,8 +732,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8505"),
     entry_recordId: ObjectId("66aae42226542431e0de8505"),
     exitTime: ISODate("2024-01-01T13:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12349",
     isResident: true,
     vehicleType: "car",
@@ -715,8 +745,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8506"),
     entry_recordId: ObjectId("66aae42226542431e0de8506"),
     exitTime: ISODate("2024-01-01T14:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12310",
     isResident: true,
     vehicleType: "car",
@@ -726,8 +758,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8507"),
     entry_recordId: ObjectId("66aae42226542431e0de8507"),
     exitTime: ISODate("2024-01-01T15:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12311",
     isResident: false,
     vehicleType: "car",
@@ -737,8 +771,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8508"),
     entry_recordId: ObjectId("66aae42226542431e0de8508"),
     exitTime: ISODate("2024-01-01T16:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12312",
     isResident: false,
     vehicleType: "motor",
@@ -748,8 +784,10 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8509"),
     entry_recordId: ObjectId("66aae42226542431e0de8509"),
     exitTime: ISODate("2024-01-01T17:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12313",
     isResident: true,
     vehicleType: "car",
@@ -759,13 +797,15 @@ db.exit_records.insertMany([
     _id: ObjectId("67aae42226542431e0de8510"),
     entry_recordId: ObjectId("66aae42226542431e0de8510"),
     exitTime: ISODate("2024-01-01T18:00:00.000Z"),
-    picture_front: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
-    picture_back: "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_front:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
+    picture_back:
+      "https://images2.thanhnien.vn/528068263637045248/2024/1/25/428059e47aeafb68640f168d615371dc-65a11b038315c880-1706156293087602824781.jpg",
     licensePlate: "51A-12314",
     isResident: true,
     vehicleType: "motor",
     isDelete: false,
-  }
+  },
 ]);
 
 db.visitor_history_moneys.insertMany([
@@ -868,20 +908,29 @@ db.visitor_history_moneys.insertMany([
     vehicleType: "motor",
     parkingFee: 5000,
     isDelete: false,
-  }
+  },
 ]);
 
 db.rfid_cards.insertMany([
   {
     _id: ObjectId("69b8e3ff3ae33121e0de8501"),
-    uuid: "ABC1234567",  // Mã UUID của thẻ
-    createdAt: ISODate("2024-01-01T00:00:00.000Z")
+    uuid: "ABC1234567", // Mã UUID của thẻ
+    createdAt: ISODate("2024-01-01T00:00:00.000Z"),
   },
   {
     _id: ObjectId("69b8e3ff3ae33121e0de8502"),
-    uuid: "XYZ9876543",  // Mã UUID của thẻ
-    createdAt: ISODate("2024-01-02T00:00:00.000Z")
-  }
+    uuid: "XYZ9876543", // Mã UUID của thẻ
+    createdAt: ISODate("2024-01-02T00:00:00.000Z"),
+  },
 ]);
-
-
+db.users.insertOne({
+  _id: ObjectId("69aae4843ae33121e0de8501"),
+  entryPort: "COM5",
+  entryBau: 9600,
+  exitPort: "COM6",
+  exitBau: 4800,
+  camera1: "1",
+  camera2: "2",
+  camera3: "3",
+  camera4: "4",
+});

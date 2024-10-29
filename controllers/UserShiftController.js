@@ -1,75 +1,76 @@
-const UserShift = require('../models/UserShift');
-const User = require('../models/User');
-const Shift = require('../models/Shift');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const s3Client = new S3Client({ region: 'your-region' });
-const mongoose = require('mongoose');
+const UserShift = require("../models/UserShift");
+const User = require("../models/User");
+const Shift = require("../models/Shift");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3Client = new S3Client({ region: "your-region" });
+const mongoose = require("mongoose");
 
 const GetAllUserShifts = async (req, res) => {
-    try {
-      const { pageNumber = 1, pageSize = 10 } = req.body;
-  
-      // Kiểm tra tính hợp lệ của pageNumber và pageSize
-      const parsedPageNumber = parseInt(pageNumber, 10);
-      const parsedPageSize = parseInt(pageSize, 10);
-  
-      if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
-        });
-      }
-  
-      if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
-        });
-      }
-  
-      const skip = (parsedPageNumber - 1) * parsedPageSize;
-  
-      // Lấy tất cả các UserShift
-      const totalRecords = await UserShift.countDocuments();
+  try {
+    const { pageNumber = 1, pageSize = 10 } = req.body;
 
-      const userShifts = await UserShift.find()
+    // Kiểm tra tính hợp lệ của pageNumber và pageSize
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+
+    // Lấy tất cả các UserShift
+    const totalRecords = await UserShift.countDocuments();
+
+    const userShifts = await UserShift.find()
       .sort({ dateTime: -1 })
       .skip(skip)
       .limit(parsedPageSize)
-      .populate('userId', 'username age') // Thay 'username','age' bằng 'username age'
-      .populate('shiftId', 'shiftName');  // Cấu trúc này đúng
+      .populate("userId", "username age fullname") // Đổi từ 'username' thành 'fullName'
+      // Thay 'username','age' bằng 'username age'
+      .populate("shiftId", "shiftName"); // Cấu trúc này đúng
 
-      if (totalRecords === 0) {
-        return res.status(404).json({
-          status: 404,
-          data: null,
-          error: 'Không có UserShift nào được tìm thấy.'
-        });
-      }
-  
-      const totalPages = Math.ceil(totalRecords / parsedPageSize);
-  
-      return res.status(200).json({
-        status: 200,
-        data: {
-          userShifts,
-          currentPage: parsedPageNumber,
-          pageSize: parsedPageSize,
-          totalRecords,
-          totalPages
-        },
-        error: null
-      });
-    } catch (error) {
-      console.error('Lỗi trong GetAllUserShifts:', error);
-      return res.status(500).json({
-        status: 500,
+    if (totalRecords === 0) {
+      return res.status(404).json({
+        status: 404,
         data: null,
-        error: 'Lỗi máy chủ không xác định.'
+        error: "Không có UserShift nào được tìm thấy.",
       });
     }
+
+    const totalPages = Math.ceil(totalRecords / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        userShifts,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalRecords,
+        totalPages,
+      },
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetAllUserShifts:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
 };
 
 const CreateUserShift = async (req, res) => {
@@ -81,7 +82,7 @@ const CreateUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Các trường userId, shiftId, và dateTime đều bắt buộc.'
+        error: "Các trường userId, shiftId, và dateTime đều bắt buộc.",
       });
     }
 
@@ -91,7 +92,7 @@ const CreateUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'userId không tồn tại trong cơ sở dữ liệu.'
+        error: "userId không tồn tại trong cơ sở dữ liệu.",
       });
     }
 
@@ -101,7 +102,7 @@ const CreateUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'shiftId không tồn tại trong cơ sở dữ liệu.'
+        error: "shiftId không tồn tại trong cơ sở dữ liệu.",
       });
     }
 
@@ -114,17 +115,21 @@ const CreateUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'dateTime phải là một ngày trong tương lai.'
+        error: "dateTime phải là một ngày trong tương lai.",
       });
     }
 
     // Kiểm tra xem UserShift đã tồn tại hay chưa (cặp userId, shiftId, dateTime)
-    const existingUserShift = await UserShift.findOne({ userId, shiftId, dateTime: parsedDateTime });
+    const existingUserShift = await UserShift.findOne({
+      userId,
+      shiftId,
+      dateTime: parsedDateTime,
+    });
     if (existingUserShift) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'UserShift đã tồn tại cho userId, shiftId, và dateTime này.'
+        error: "UserShift đã tồn tại cho userId, shiftId, và dateTime này.",
       });
     }
 
@@ -132,33 +137,33 @@ const CreateUserShift = async (req, res) => {
     const newUserShift = new UserShift({
       userId,
       shiftId,
-      dateTime: parsedDateTime
+      dateTime: parsedDateTime,
     });
 
     // Lưu vào cơ sở dữ liệu
     await newUserShift.save();
 
     const populatedUserShift = await UserShift.findById(newUserShift._id)
-    .populate({
-      path: 'userId',
-      select: 'username age' // Chỉ lấy các trường cần thiết từ User
-    })
-    .populate({
-      path: 'shiftId',
-      select: 'shiftName' // Chỉ lấy các trường cần thiết từ Shift
-    });
+      .populate({
+        path: "userId",
+        select: "username age", // Chỉ lấy các trường cần thiết từ User
+      })
+      .populate({
+        path: "shiftId",
+        select: "shiftName", // Chỉ lấy các trường cần thiết từ Shift
+      });
 
     return res.status(201).json({
       status: 201,
       data: populatedUserShift,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong CreateUserShift:', error);
+    console.error("Lỗi trong CreateUserShift:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -172,7 +177,7 @@ const UpdateUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'ID không hợp lệ.'
+        error: "ID không hợp lệ.",
       });
     }
 
@@ -182,7 +187,7 @@ const UpdateUserShift = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy UserShift với ID này.'
+        error: "Không tìm thấy UserShift với ID này.",
       });
     }
 
@@ -193,7 +198,7 @@ const UpdateUserShift = async (req, res) => {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'userId không tồn tại trong cơ sở dữ liệu.'
+          error: "userId không tồn tại trong cơ sở dữ liệu.",
         });
       }
     }
@@ -205,7 +210,7 @@ const UpdateUserShift = async (req, res) => {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'shiftId không tồn tại trong cơ sở dữ liệu.'
+          error: "shiftId không tồn tại trong cơ sở dữ liệu.",
         });
       }
     }
@@ -218,7 +223,7 @@ const UpdateUserShift = async (req, res) => {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'dateTime phải là một ngày trong tương lai.'
+          error: "dateTime phải là một ngày trong tương lai.",
         });
       }
 
@@ -227,14 +232,14 @@ const UpdateUserShift = async (req, res) => {
         userId: userId || userShift.userId,
         shiftId: shiftId || userShift.shiftId,
         dateTime: parsedDateTime,
-        _id: { $ne: id } // Loại bỏ bản ghi hiện tại khỏi kết quả tìm kiếm
+        _id: { $ne: id }, // Loại bỏ bản ghi hiện tại khỏi kết quả tìm kiếm
       });
 
       if (existingUserShift) {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'UserShift đã tồn tại cho userId, shiftId, và dateTime này.'
+          error: "UserShift đã tồn tại cho userId, shiftId, và dateTime này.",
         });
       }
     }
@@ -248,27 +253,26 @@ const UpdateUserShift = async (req, res) => {
     await userShift.save();
 
     const populatedUserShift = await UserShift.findById(userShift._id)
-    .populate({
-      path: 'userId',
-      select: 'username age fullname' // Lấy các trường cần thiết từ User
-    })
-    .populate({
-      path: 'shiftId',
-      select: 'shiftName' // Lấy các trường cần thiết từ Shift
-    });
-
+      .populate({
+        path: "userId",
+        select: "username age fullname", // Lấy các trường cần thiết từ User
+      })
+      .populate({
+        path: "shiftId",
+        select: "shiftName", // Lấy các trường cần thiết từ Shift
+      });
 
     return res.status(200).json({
       status: 200,
       data: populatedUserShift,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong UpdateUserShift:', error);
+    console.error("Lỗi trong UpdateUserShift:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -281,7 +285,7 @@ const DeleteUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'ID không hợp lệ.'
+        error: "ID không hợp lệ.",
       });
     }
 
@@ -291,7 +295,7 @@ const DeleteUserShift = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy UserShift với ID này.'
+        error: "Không tìm thấy UserShift với ID này.",
       });
     }
 
@@ -300,22 +304,28 @@ const DeleteUserShift = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      data: 'UserShift đã được xóa thành công.',
-      error: null
+      data: "UserShift đã được xóa thành công.",
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong DeleteUserShift:', error);
+    console.error("Lỗi trong DeleteUserShift:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
   try {
-    const { userId, startDate, endDate, pageNumber = 1, pageSize = 10 } = req.body;
+    const {
+      userId,
+      startDate,
+      endDate,
+      pageNumber = 1,
+      pageSize = 10,
+    } = req.body;
 
     // Kiểm tra pageNumber và pageSize
     const parsedPageNumber = parseInt(pageNumber, 10);
@@ -325,7 +335,7 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -333,7 +343,7 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -349,12 +359,16 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
 
     // Nếu có startDate hoặc endDate, thêm phạm vi thời gian vào query
     if (startDate) {
-      query.dateTime = { $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)) }; // Bắt đầu từ ngày startDate
+      query.dateTime = {
+        $gte: new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+      }; // Bắt đầu từ ngày startDate
     }
 
     if (endDate) {
       query.dateTime = query.dateTime || {}; // Đảm bảo query.dateTime không bị ghi đè
-      query.dateTime.$lte = new Date(new Date(endDate).setHours(23, 59, 59, 999)); // Đến cuối ngày endDate
+      query.dateTime.$lte = new Date(
+        new Date(endDate).setHours(23, 59, 59, 999)
+      ); // Đến cuối ngày endDate
     }
 
     // Đếm tổng số bản ghi phù hợp
@@ -363,7 +377,7 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không có UserShift nào phù hợp với điều kiện lọc.'
+        error: "Không có UserShift nào phù hợp với điều kiện lọc.",
       });
     }
 
@@ -371,8 +385,8 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
     const userShifts = await UserShift.find(query)
       .skip(skip)
       .limit(parsedPageSize)
-      .populate('userId', 'name') // Lấy thông tin user
-      .populate('shiftId', 'shiftName startTime endTime'); // Lấy thông tin shift
+      .populate("userId", "name") // Lấy thông tin user
+      .populate("shiftId", "shiftName startTime endTime"); // Lấy thông tin shift
 
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
 
@@ -383,16 +397,16 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong GetUserShiftsByUserIdAndDateRange:', error);
+    console.error("Lỗi trong GetUserShiftsByUserIdAndDateRange:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -409,7 +423,7 @@ const FilterUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -417,7 +431,7 @@ const FilterUserShift = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -433,12 +447,12 @@ const FilterUserShift = async (req, res) => {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'Ngày không hợp lệ.'
+          error: "Ngày không hợp lệ.",
         });
       }
       matchCondition.dateTime = {
-        $gte: new Date(new Date(parsedDate).setHours(0, 0, 0, 0)),  // Đặt bắt đầu ngày
-        $lte: new Date(new Date(parsedDate).setHours(23, 59, 59, 999))  // Đặt cuối ngày
+        $gte: new Date(new Date(parsedDate).setHours(0, 0, 0, 0)), // Đặt bắt đầu ngày
+        $lte: new Date(new Date(parsedDate).setHours(23, 59, 59, 999)), // Đặt cuối ngày
       };
     }
 
@@ -449,7 +463,7 @@ const FilterUserShift = async (req, res) => {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'shiftId không tồn tại trong cơ sở dữ liệu.'
+          error: "shiftId không tồn tại trong cơ sở dữ liệu.",
         });
       }
       matchCondition.shiftId = shiftId;
@@ -461,7 +475,7 @@ const FilterUserShift = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không có UserShift nào phù hợp với điều kiện lọc.'
+        error: "Không có UserShift nào phù hợp với điều kiện lọc.",
       });
     }
 
@@ -469,8 +483,8 @@ const FilterUserShift = async (req, res) => {
     const userShifts = await UserShift.find(matchCondition)
       .skip(skip)
       .limit(parsedPageSize)
-      .populate('userId', 'username age fullname')  // Đổi từ 'username' thành 'fullName'
-      .populate('shiftId', 'shiftName');  // Lấy thông tin shift
+      .populate("userId", "username age fullname") // Đổi từ 'username' thành 'fullName'
+      .populate("shiftId", "shiftName"); // Lấy thông tin shift
 
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
 
@@ -481,26 +495,25 @@ const FilterUserShift = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong filterUserShift:', error);
+    console.error("Lỗi trong filterUserShift:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 module.exports = {
-    GetAllUserShifts,
-    CreateUserShift,
-    UpdateUserShift,
-    DeleteUserShift,
-    GetUserShiftsByUserIdAndDateRange,
-    FilterUserShift
+  GetAllUserShifts,
+  CreateUserShift,
+  UpdateUserShift,
+  DeleteUserShift,
+  GetUserShiftsByUserIdAndDateRange,
+  FilterUserShift,
 };
-  
