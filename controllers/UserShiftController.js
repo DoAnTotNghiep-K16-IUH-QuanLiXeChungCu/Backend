@@ -146,7 +146,7 @@ const CreateUserShift = async (req, res) => {
     const populatedUserShift = await UserShift.findById(newUserShift._id)
       .populate({
         path: "userId",
-        select: "username age", // Chỉ lấy các trường cần thiết từ User
+        select: "username fullname age", // Chỉ lấy các trường cần thiết từ User
       })
       .populate({
         path: "shiftId",
