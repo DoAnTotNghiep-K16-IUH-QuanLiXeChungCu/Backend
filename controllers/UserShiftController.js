@@ -413,7 +413,7 @@ const GetUserShiftsByUserIdAndDateRange = async (req, res) => {
 
 const FilterUserShift = async (req, res) => {
   try {
-    const { date, shiftId, pageNumber = 1, pageSize = 10 } = req.body;
+    const { startDate, endDate, shiftId, pageNumber = 1, pageSize = 10 } = req.body;
 
     // Kiểm tra tính hợp lệ của pageNumber và pageSize
     const parsedPageNumber = parseInt(pageNumber, 10);
@@ -440,19 +440,22 @@ const FilterUserShift = async (req, res) => {
     // Tạo điều kiện lọc động
     const matchCondition = {};
 
-    // Lọc theo date nếu có
-    if (date) {
-      const parsedDate = new Date(date);
-      if (isNaN(parsedDate.getTime())) {
+    // Lọc theo khoảng thời gian (startDate và endDate) nếu có
+    if (startDate && endDate) {
+      const parsedStartDate = new Date(startDate);
+      const parsedEndDate = new Date(endDate);
+
+      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
         return res.status(400).json({
           status: 400,
           data: null,
           error: "Ngày không hợp lệ.",
         });
       }
+
       matchCondition.dateTime = {
-        $gte: new Date(new Date(parsedDate).setHours(0, 0, 0, 0)), // Đặt bắt đầu ngày
-        $lte: new Date(new Date(parsedDate).setHours(23, 59, 59, 999)), // Đặt cuối ngày
+        $gte: new Date(parsedStartDate.setHours(0, 0, 0, 0)), // Đặt bắt đầu của ngày
+        $lte: new Date(parsedEndDate.setHours(23, 59, 59, 999)), // Đặt cuối của ngày
       };
     }
 

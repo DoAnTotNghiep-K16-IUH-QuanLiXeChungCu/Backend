@@ -548,45 +548,10 @@ const CountVehicleEntry = async (req, res) => {
 
 const CreateEntryRecord = async (req, res) => {
   try {
-    const {picture_front, picture_back, licensePlate, vehicleType, users_shiftId, rfidId } = req.body;
+    const { picture_front, picture_back, licensePlate, vehicleType, users_shiftId, rfidId } = req.body;
 
     const entryTime = new Date();
-    let isResident = req.body.isResident; 
-
-    // Kiểm tra licensePlate trong cơ sở dữ liệu
-    const vehicle = await Vehicle.findOne({ licensePlate });
-
-    if (!vehicle) {
-      isResident = false;
-    } else {
-      // Lấy vehicleId từ bảng Vehicle
-      const vehicleId = vehicle._id;
-
-      // Tìm bản ghi ResidentHistoryMoney theo vehicleId và lấy bản ghi có endDate gần nhất
-      const residentHistory = await ResidentHistoryMoney.findOne({ vehicleId, isDelete: false })
-        .sort({ endDate: -1 }) // Sắp xếp theo ngày kết thúc giảm dần (mới nhất trước)
-        .limit(1); // Lấy bản ghi mới nhất
-
-      if (residentHistory) {
-        const endDate = new Date(residentHistory.endDate);
-        const currentDate = new Date();
-
-        // Kiểm tra nếu ngày kết thúc đã qua
-        if (endDate < currentDate) {
-          return res.status(400).json({
-            status: 400,
-            data: null,
-            error: 'Hết hạn đăng ký tháng, không thể đăng nhập xe cư dân.'
-          });
-        }
-
-        // Nếu ngày kết thúc hợp lệ, giữ isResident là true
-        isResident = true;
-      } else {
-        // Nếu không có bản ghi ResidentHistoryMoney hợp lệ, không phải cư dân
-        isResident = false;
-      }
-    }
+    let isResident = req.body.isResident;
 
     // Kiểm tra tính hợp lệ của licensePlate
     if (!licensePlate || typeof licensePlate !== 'string') {
@@ -615,8 +580,8 @@ const CreateEntryRecord = async (req, res) => {
         error: 'users_shiftId không hợp lệ.'
       });
     }
-    const shiftExists = await UserShift.findById(users_shiftId);
-    if (!shiftExists) {
+    const userShift = await UserShift.findById(users_shiftId).populate('userId').populate('shiftId');
+    if (!userShift) {
       return res.status(400).json({
         status: 400,
         data: null,
@@ -632,8 +597,8 @@ const CreateEntryRecord = async (req, res) => {
         error: 'rfidId không hợp lệ.'
       });
     }
-    const rfidExists = await RFIDCard.findById(rfidId);
-    if (!rfidExists) {
+    const rfidCard = await RFIDCard.findById(rfidId).select('uuid createdAt');
+    if (!rfidCard) {
       return res.status(400).json({
         status: 400,
         data: null,
@@ -641,10 +606,43 @@ const CreateEntryRecord = async (req, res) => {
       });
     }
 
+    // Kiểm tra licensePlate trong cơ sở dữ liệu
+    const vehicle = await Vehicle.findOne({ licensePlate });
+    let customer = {};
+
+    if (!vehicle) {
+      isResident = false;
+    } else {
+      const vehicleId = vehicle._id;
+
+      // Tìm bản ghi ResidentHistoryMoney theo vehicleId và lấy bản ghi có endDate gần nhất
+      const residentHistory = await ResidentHistoryMoney.findOne({ vehicleId, isDelete: false })
+        .sort({ endDate: -1 })
+        .limit(1);
+
+      if (residentHistory) {
+        const endDate = new Date(residentHistory.endDate);
+        const currentDate = new Date();
+
+        if (endDate < currentDate) {
+          return res.status(400).json({
+            status: 400,
+            data: null,
+            error: 'Hết hạn đăng ký tháng, không thể đăng nhập xe cư dân.'
+          });
+        }
+        isResident = true;
+      } else {
+        isResident = false;
+      }
+
+      customer = await Customer.findById(vehicle.customerId).select('fullName phoneNumber address isResident');
+    }
+
     // Lấy phần đường dẫn tương đối từ URL
     const extractRelativePath = (url) => {
-      const serverUrl = process.env.MINIO_SERVER_URL; // Lấy URL server từ biến môi trường
-      return url.replace(serverUrl, ''); // Loại bỏ URL của MinIO, chỉ giữ lại phần đường dẫn
+      const serverUrl = process.env.MINIO_SERVER_URL;
+      return url.replace(serverUrl, '');
     };
 
     const relativePictureFront = extractRelativePath(picture_front);
@@ -653,22 +651,48 @@ const CreateEntryRecord = async (req, res) => {
     // Tạo bản ghi EntryRecord mới
     const newEntryRecord = new EntryRecord({
       entryTime,
-      picture_front: relativePictureFront, // Lưu phần đường dẫn tương đối
-      picture_back: relativePictureBack,   // Lưu phần đường dẫn tương đối
+      picture_front: relativePictureFront,
+      picture_back: relativePictureBack,
       licensePlate,
       isResident,
       vehicleType,
       users_shiftId,
       rfidId,
-      isOut: false, // Mặc định khi vào bãi xe là chưa ra
+      isOut: false
     });
 
-    // Lưu bản ghi vào cơ sở dữ liệu
     await newEntryRecord.save();
 
+    // Định dạng phản hồi theo cấu trúc yêu cầu
     return res.status(201).json({
       status: 201,
-      data: newEntryRecord,
+      entryRecord: {
+        id: newEntryRecord._id,
+        entryTime: newEntryRecord.entryTime,
+        picture_front: `${process.env.MINIO_SERVER_URL}${relativePictureFront}`,
+        picture_back: `${process.env.MINIO_SERVER_URL}${relativePictureBack}`,
+        licensePlate: newEntryRecord.licensePlate,
+        isResident: newEntryRecord.isResident,
+        vehicleType: newEntryRecord.vehicleType,
+        isOut: newEntryRecord.isOut,
+        users_shift: {
+          fullName: userShift?.userId?.fullname || '',
+          phoneNumber: userShift?.userId?.phoneNumber || '',
+          shiftName: userShift?.shiftId?.shiftName || '',
+          startTime: userShift?.shiftId?.startTime || '',
+          endTime: userShift?.shiftId?.endTime || ''
+        },
+        rfid: {
+          uuid: rfidCard?.uuid || [],
+          createdAt: rfidCard?.createdAt || []
+        },
+        customer: {
+          fullName: customer?.fullName || '',
+          phoneNumber: customer?.phoneNumber || '',
+          address: customer?.address || '',
+          isResident: customer?.isResident || false
+        }
+      },
       error: null
     });
   } catch (error) {
@@ -809,6 +833,7 @@ const FilterEntryRecords = async (req, res) => {
     // Pipeline để lấy dữ liệu từ EntryRecord
     const pipeline = [
       { $match: matchCondition },
+      { $sort: { entryTime: -1 } }, 
       {
         $lookup: {
           from: 'vehicles',
