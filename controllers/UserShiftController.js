@@ -512,6 +512,76 @@ const FilterUserShift = async (req, res) => {
   }
 };
 
+const GetUserShiftsByUserIdAndShiftIdAndDateTime = async (req, res) => {
+  try {
+    const { userId, shiftId, dateTime } = req.body;
+
+    // Kiểm tra các trường bắt buộc
+    if (!userId || !shiftId || !dateTime) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu trường userId, shiftId hoặc dateTime trong body request.",
+      });
+    }
+
+    // Kiểm tra tính hợp lệ của userId và shiftId dưới dạng ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(shiftId)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "userId hoặc shiftId không hợp lệ.",
+      });
+    }
+
+    // Phân tích và kiểm tra tính hợp lệ của dateTime
+    const parsedDate = new Date(dateTime);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "dateTime không hợp lệ.",
+      });
+    }
+
+    // Định nghĩa khoảng thời gian trong ngày cho việc lọc theo dateTime
+    const startOfDay = new Date(parsedDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(parsedDate.setHours(23, 59, 59, 999));
+
+    // Tìm một bản ghi UserShift phù hợp
+    const userShift = await UserShift.findOne({
+      userId,
+      shiftId,
+      dateTime: { $gte: startOfDay, $lte: endOfDay },
+    })
+      .populate("userId", "username fullname age address phoneNumber")
+      .populate("shiftId", "shiftName startTime endTime");
+
+    // Nếu không tìm thấy bản ghi nào phù hợp
+    if (!userShift) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy UserShift nào phù hợp với điều kiện cung cấp.",
+      });
+    }
+
+    // Trả về bản ghi user shift phù hợp
+    return res.status(200).json({
+      status: 200,
+      data: userShift,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetUserShiftsByUserIdAndShiftIdAndDateTime:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+
 module.exports = {
   GetAllUserShifts,
   CreateUserShift,
@@ -519,4 +589,5 @@ module.exports = {
   DeleteUserShift,
   GetUserShiftsByUserIdAndDateRange,
   FilterUserShift,
+  GetUserShiftsByUserIdAndShiftIdAndDateTime
 };

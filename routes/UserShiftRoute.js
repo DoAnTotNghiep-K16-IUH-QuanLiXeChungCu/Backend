@@ -21,5 +21,8 @@ router.patch("/GetUserShiftsByUserIdAndDateRange", middleware.verifyToken , User
 // http://localhost:3000/api/v1/userShift/FilterUserShift
 router.patch("/FilterUserShift", middleware.verifyToken , UserShiftController.FilterUserShift);
 
+// http://localhost:3000/api/v1/userShift/GetUserShiftsByUserIdAndShiftIdAndDateTime
+router.patch("/GetUserShiftsByUserIdAndShiftIdAndDateTime", middleware.verifyToken , UserShiftController.GetUserShiftsByUserIdAndShiftIdAndDateTime);
+
 // API 
 module.exports = router;

@@ -1003,6 +1003,81 @@ const FilterEntryRecords = async (req, res) => {
   }
 };
 
+const GetEntryRecordByisOutAndUuidAndLicensePlate = async (req, res) => {
+  try {
+    const { isOut, uuid, licensePlate } = req.body;
+
+    // Validate request fields
+    if (typeof isOut !== 'boolean' || !uuid || !licensePlate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Thiếu trường isOut, uuid hoặc licensePlate trong body request.'
+      });
+    }
+
+    // Find the RFID card by uuid
+    const rfidCard = await RFIDCard.findOne({ uuid });
+    if (!rfidCard) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy RFIDCard với uuid cung cấp.'
+      });
+    }
+
+    // Use the rfidCard._id to find the EntryRecord
+    const entryRecord = await EntryRecord.findOne({ isOut, rfidId: rfidCard._id, licensePlate })
+      .populate({
+        path: 'users_shiftId',
+        populate: [
+          {
+            path: 'userId',
+            model: 'User',
+            select: 'username'
+          },
+          {
+            path: 'shiftId',
+            model: 'Shift',
+            select: 'shiftName startTime endTime'
+          }
+        ]
+      })
+      .populate({
+        path: 'rfidId',
+        model: 'RFIDCard',
+        select: 'uuid'
+      });
+
+    // Check if the entry record was found
+    if (!entryRecord) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: 'Không tìm thấy bản ghi EntryRecord với các điều kiện cung cấp.'
+      });
+    }
+
+    // Add URL prefixes to pictures if available
+    entryRecord.picture_front = entryRecord.picture_front ? `${process.env.MINIO_SERVER_URL}${entryRecord.picture_front}` : '';
+    entryRecord.picture_back = entryRecord.picture_back ? `${process.env.MINIO_SERVER_URL}${entryRecord.picture_back}` : '';
+
+    // Send response with the populated entry record
+    return res.status(200).json({
+      status: 200,
+      data: entryRecord,
+      error: null
+    });
+  } catch (error) {
+    console.error(`Lỗi trong GetEntryRecordByisOutAndUuidAndLicensePlate từ EntryRecord:`, error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: 'Lỗi máy chủ không xác định.'
+    });
+  }
+};
+
 module.exports = {
   GetAllEntryRecords,
   GetEntryRecordById,
@@ -1012,6 +1087,7 @@ module.exports = {
   CountVehicleEntry,
   CreateEntryRecord,
   CountVehicleNonExit,
-  FilterEntryRecords
+  FilterEntryRecords,
+  GetEntryRecordByisOutAndUuidAndLicensePlate
 };
   

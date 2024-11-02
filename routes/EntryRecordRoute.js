@@ -30,5 +30,8 @@ router.get("/CountVehicleNonExit", middleware.verifyToken , EntryRecordControlle
 // http://localhost:3000/api/v1/entryRecord/FilterEntryRecords
 router.patch("/FilterEntryRecords", middleware.verifyToken , EntryRecordController.FilterEntryRecords);
 
+// http://localhost:3000/api/v1/entryRecord/GetEntryRecordByisOutAndUuidAndLicensePlate
+router.patch("/GetEntryRecordByisOutAndUuidAndLicensePlate", middleware.verifyToken , EntryRecordController.GetEntryRecordByisOutAndUuidAndLicensePlate);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router; 
