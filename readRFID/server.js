@@ -5,8 +5,15 @@ let clientsEntry = [];
 let clientsExit = [];
 let lastRfidEntry = "";
 let lastRfidExit = "";
-let portEntry; // Cổng serial cho Entry
-let portExit; // Cổng serial cho Exit
+let portEntry;
+let portExit;
+
+let anotherClientsEntry = [];
+let anotherClientsExit = [];
+let anotherPortEntry;
+let anotherPortExit;
+let anotherLastRfidEntry = "";
+let anotherLastRfidExit = "";
 
 // Khởi tạo cổng serial cho Entry và Exit
 const initSerialPortEntry = (portPath, baudRate) => {
@@ -83,7 +90,11 @@ const openSerialPortExit = (portPath, baudRate) => {
 const setupSerialPortEntry = (req, res) => {
   const { comPort, baudRate } = req.body;
   if (!comPort) {
-    return res.status(400).send("Cổng serial cho Entry không được cung cấp");
+    return res
+      .status(400)
+      .send(
+        `Cổng serial ${comPort} cho Entry không được cung cấp hoặc đã bị sử dụng`
+      );
   }
   initSerialPortEntry(comPort, baudRate);
   res.status(200).send(`Cổng serial Entry ${comPort} đã được khởi tạo.`);
@@ -93,7 +104,11 @@ const setupSerialPortEntry = (req, res) => {
 const setupSerialPortExit = (req, res) => {
   const { comPort, baudRate } = req.body;
   if (!comPort) {
-    return res.status(400).send("Cổng serial cho Exit không được cung cấp");
+    return res
+      .status(400)
+      .send(
+        `Cổng serial ${comPort} cho Exit không được cung cấp hoặc đã bị sử dụng`
+      );
   }
   initSerialPortExit(comPort, baudRate);
   res.status(200).send(`Cổng serial Exit ${comPort} đã được khởi tạo.`);
@@ -125,6 +140,137 @@ const getRFIDEventsExit = (req, res) => {
   });
 };
 
+// Khởi tạo cổng serial cho Entry và Exit
+const initAnotherSerialPortEntry = (portPath, baudRate) => {
+  if (anotherPortEntry && anotherPortEntry.isOpen) {
+    anotherPortEntry.close((err) => {
+      if (err) {
+        console.error(`Lỗi khi đóng cổng Entry: ${err.message}`);
+      } else {
+        console.log("Cổng Entry đã được đóng trước khi khởi tạo lại.");
+        openAnotherSerialPortEntry(portPath, baudRate); // Mở lại cổng Entry sau khi đóng
+      }
+    });
+  } else {
+    openAnotherSerialPortEntry(portPath, baudRate); // Mở cổng Entry nếu chưa được mở
+  }
+};
+
+const initAnotherSerialPortExit = (portPath, baudRate) => {
+  if (anotherPortExit && anotherPortExit.isOpen) {
+    anotherPortExit.close((err) => {
+      if (err) {
+        console.error(`Lỗi khi đóng cổng Exit: ${err.message}`);
+      } else {
+        console.log("Cổng Exit đã được đóng trước khi khởi tạo lại.");
+        openAnotherSerialPortExit(portPath, baudRate); // Mở lại cổng Exit sau khi đóng
+      }
+    });
+  } else {
+    openAnotherSerialPortExit(portPath, baudRate); // Mở cổng Exit nếu chưa được mở
+  }
+};
+
+// Hàm mở cổng serial cho Entry
+const openAnotherSerialPortEntry = (portPath, baudRate) => {
+  anotherPortEntry = new SerialPort({ path: portPath, baudRate: baudRate }).on(
+    "error",
+    (err) => {
+      console.error(`Lỗi mở cổng Entry ${portPath}: ${err.message}`);
+    }
+  );
+  const parser = anotherPortEntry.pipe(new ReadlineParser({ delimiter: "\n" }));
+
+  // Đọc dữ liệu từ cổng Entry
+  parser.on("data", (data) => {
+    console.log(`Dữ liệu từ Entry: ${data}`);
+    anotherLastRfidEntry = data.trim(); // Lưu thông tin thẻ RFID từ Entry
+
+    // Gửi dữ liệu cho tất cả các client đang kết nối với Entry
+    anotherClientsEntry.forEach((res) =>
+      res.write(`data: ${anotherLastRfidEntry}\n\n`)
+    );
+  });
+};
+
+// Hàm mở cổng serial cho Exit
+const openAnotherSerialPortExit = (portPath, baudRate) => {
+  anotherPortEntry = new SerialPort({ path: portPath, baudRate: baudRate }).on(
+    "error",
+    (err) => {
+      console.error(`Lỗi mở cổng Exit ${portPath}: ${err.message}`);
+    }
+  );
+  const parser = anotherPortEntry.pipe(new ReadlineParser({ delimiter: "\n" }));
+
+  // Đọc dữ liệu từ cổng Exit
+  parser.on("data", (data) => {
+    console.log(`Dữ liệu từ Exit: ${data}`);
+    anotherLastRfidExit = data.trim(); // Lưu thông tin thẻ RFID từ Exit
+
+    // Gửi dữ liệu cho tất cả các client đang kết nối với Exit
+    anotherClientsExit.forEach((res) =>
+      res.write(`data: ${anotherLastRfidExit}\n\n`)
+    );
+  });
+};
+
+// Endpoint để khởi tạo cổng serial cho Entry
+const setupAnotherSerialPortEntry = (req, res) => {
+  const { comPort, baudRate } = req.body;
+  if (!comPort) {
+    return res
+      .status(400)
+      .send(
+        `Cổng serial ${comPort} cho Entry không được cung cấp hoặc đã bị sử dụng`
+      );
+  }
+  initAnotherSerialPortEntry(comPort, baudRate);
+  res.status(200).send(`Cổng serial Entry ${comPort} đã được khởi tạo.`);
+};
+
+// Endpoint để khởi tạo cổng serial cho Exit
+const setupAnotherSerialPortExit = (req, res) => {
+  const { comPort, baudRate } = req.body;
+  if (!comPort) {
+    return res
+      .status(400)
+      .send(
+        `Cổng serial ${comPort} cho Exit không được cung cấp hoặc đã bị sử dụng`
+      );
+  }
+  initAnotherSerialPortExit(comPort, baudRate);
+  res.status(200).send(`Cổng serial Exit ${comPort} đã được khởi tạo.`);
+};
+
+// Endpoint SSE để gửi dữ liệu RFID cho Entry
+const getAnotherRFIDEventsEntry = (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  res.write(`data: ${anotherLastRfidEntry}\n\n`);
+  anotherClientsEntry.push(res);
+  req.on("close", () => {
+    anotherClientsEntry = anotherClientsEntry.filter(
+      (client) => client !== res
+    );
+  });
+};
+
+// Endpoint SSE để gửi dữ liệu RFID cho Exit
+const getAnotherRFIDEventsExit = (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  res.write(`data: ${anotherLastRfidExit}\n\n`);
+  anotherClientsExit.push(res);
+  req.on("close", () => {
+    anotherClientsExit = anotherClientsExit.filter((client) => client !== res);
+  });
+};
+
 // Endpoint để lấy danh sách các cổng COM
 const getListPorts = async (req, res) => {
   try {
@@ -138,7 +284,11 @@ const getListPorts = async (req, res) => {
 module.exports = {
   getRFIDEventsEntry,
   getRFIDEventsExit,
-  getListPorts,
   setupSerialPortEntry,
   setupSerialPortExit,
+  getAnotherRFIDEventsEntry,
+  getAnotherRFIDEventsExit,
+  setupAnotherSerialPortEntry,
+  setupAnotherSerialPortExit,
+  getListPorts,
 };
