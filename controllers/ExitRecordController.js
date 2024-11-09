@@ -2,9 +2,9 @@ const ExitRecord = require("../models/ExitRecord");
 const EntryRecord = require("../models/EntryRecord");
 const ParkingRate = require("../models/ParkingRate");
 const VisitorHistoryMoney = require("../models/VisitorHistoryMoney");
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const s3Client = new S3Client({ region: 'your-region' });
-const mongoose = require('mongoose');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3Client = new S3Client({ region: "your-region" });
+const mongoose = require("mongoose");
 
 const GetAllExitRecords = async (req, res) => {
   try {
@@ -20,7 +20,7 @@ const GetAllExitRecords = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -28,7 +28,7 @@ const GetAllExitRecords = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -40,15 +40,15 @@ const GetAllExitRecords = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không có bản ghi nào được tìm thấy.'
+        error: "Không có bản ghi nào được tìm thấy.",
       });
     }
 
     const records = await ExitRecord.find({ isDelete: false })
       .populate({
-        path: 'entry_recordId', // Liên kết với bảng EntryRecord
-        model: 'EntryRecord', // Lấy dữ liệu từ bảng EntryRecord
-        select: 'entryTime licensePlate vehicleType' // Chỉ lấy các trường cần thiết từ EntryRecord
+        path: "entry_recordId", // Liên kết với bảng EntryRecord
+        model: "EntryRecord", // Lấy dữ liệu từ bảng EntryRecord
+        select: "entryTime licensePlate vehicleType", // Chỉ lấy các trường cần thiết từ EntryRecord
       })
       .sort({ exitTime: -1 }) // Sắp xếp theo thời gian exitTime giảm dần
       .skip(skip)
@@ -58,14 +58,18 @@ const GetAllExitRecords = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy bản ghi nào cho trang này.'
+        error: "Không tìm thấy bản ghi nào cho trang này.",
       });
     }
 
-    const updatedRecords = records.map(record => ({
+    const updatedRecords = records.map((record) => ({
       ...record.toObject(),
-      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
-      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+      picture_front: record.picture_front
+        ? `${process.env.MINIO_SERVER_URL}${record.picture_front}`
+        : "",
+      picture_back: record.picture_back
+        ? `${process.env.MINIO_SERVER_URL}${record.picture_back}`
+        : "",
     }));
 
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
@@ -77,17 +81,19 @@ const GetAllExitRecords = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
-
   } catch (error) {
-    console.error(`Lỗi không xác định trong GetAllExitRecords từ ExitRecord:`, error);
+    console.error(
+      `Lỗi không xác định trong GetAllExitRecords từ ExitRecord:`,
+      error
+    );
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -101,41 +107,44 @@ const GetExitRecordById = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu trường id trong body request.'
+        error: "Thiếu trường id trong body request.",
       });
     }
 
-    const exitRecord = await ExitRecord.findById(id)
-      .populate({
-        path: 'entry_recordId',
-        model: 'EntryRecord',
-        select: 'entryTime licensePlate vehicleType'
-      });
+    const exitRecord = await ExitRecord.findById(id).populate({
+      path: "entry_recordId",
+      model: "EntryRecord",
+      select: "entryTime licensePlate vehicleType",
+    });
 
     if (!exitRecord) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy bản ghi ExitRecord với id này.'
+        error: "Không tìm thấy bản ghi ExitRecord với id này.",
       });
     }
     const updatedExitRecord = {
       ...exitRecord.toObject(),
-      picture_front: exitRecord.picture_front ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_front}` : '',
-      picture_back: exitRecord.picture_back ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_back}` : ''
+      picture_front: exitRecord.picture_front
+        ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_front}`
+        : "",
+      picture_back: exitRecord.picture_back
+        ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_back}`
+        : "",
     };
 
     return res.status(200).json({
       status: 200,
       data: updatedExitRecord,
-      error: null
+      error: null,
     });
   } catch (error) {
     console.error(`Lỗi trong getExitRecordById từ ExitRecord:`, error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -149,42 +158,48 @@ const GetExitRecordByEntryRecordId = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu trường entry_recordId trong body request.'
+        error: "Thiếu trường entry_recordId trong body request.",
       });
     }
 
-    const exitRecord = await ExitRecord.findOne({ entry_recordId })
-      .populate({
-        path: 'entry_recordId',
-        model: 'EntryRecord',
-        select: 'entryTime licensePlate vehicleType'
-      });
+    const exitRecord = await ExitRecord.findOne({ entry_recordId }).populate({
+      path: "entry_recordId",
+      model: "EntryRecord",
+      select: "entryTime licensePlate vehicleType",
+    });
 
     if (!exitRecord) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy bản ghi ExitRecord với entry_recordId này.'
+        error: "Không tìm thấy bản ghi ExitRecord với entry_recordId này.",
       });
     }
 
     const updatedExitRecord = {
       ...exitRecord.toObject(),
-      picture_front: exitRecord.picture_front ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_front}` : '',
-      picture_back: exitRecord.picture_back ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_back}` : ''
+      picture_front: exitRecord.picture_front
+        ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_front}`
+        : "",
+      picture_back: exitRecord.picture_back
+        ? `${process.env.MINIO_SERVER_URL}${exitRecord.picture_back}`
+        : "",
     };
 
     return res.status(200).json({
       status: 200,
       data: updatedExitRecord,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error(`Lỗi trong getExitRecordByEntryRecordId từ ExitRecord:`, error);
+    console.error(
+      `Lỗi trong getExitRecordByEntryRecordId từ ExitRecord:`,
+      error
+    );
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -198,7 +213,7 @@ const GetExitRecordByLicensePlate = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu trường licensePlate trong body request.'
+        error: "Thiếu trường licensePlate trong body request.",
       });
     }
 
@@ -210,7 +225,7 @@ const GetExitRecordByLicensePlate = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -218,27 +233,27 @@ const GetExitRecordByLicensePlate = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
     const skip = (parsedPageNumber - 1) * parsedPageSize;
 
     const totalRecords = await ExitRecord.countDocuments({ licensePlate });
-    
+
     if (totalRecords === 0) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy bản ghi ExitRecord với licensePlate này.'
+        error: "Không tìm thấy bản ghi ExitRecord với licensePlate này.",
       });
     }
 
     const exitRecords = await ExitRecord.find({ licensePlate })
       .populate({
-        path: 'entry_recordId',
-        model: 'EntryRecord',
-        select: 'entryTime licensePlate vehicleType'
+        path: "entry_recordId",
+        model: "EntryRecord",
+        select: "entryTime licensePlate vehicleType",
       })
       .skip(skip)
       .limit(parsedPageSize);
@@ -252,95 +267,103 @@ const GetExitRecordByLicensePlate = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error(`Lỗi trong GetExitRecordByLicensePlate từ ExitRecord:`, error);
+    console.error(
+      `Lỗi trong GetExitRecordByLicensePlate từ ExitRecord:`,
+      error
+    );
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const GetExitRecordsByDateRange = async (req, res) => {
   try {
-      const { startDate, endDate, pageNumber = 1, pageSize = 10 } = req.body;
+    const { startDate, endDate, pageNumber = 1, pageSize = 10 } = req.body;
 
-      // Kiểm tra trường hợp thiếu startDate hoặc endDate
-      if (!startDate || !endDate) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'Thiếu trường startDate hoặc endDate trong body request.'
-          });
-      }
-
-      // Chuyển đổi ngày bắt đầu và ngày kết thúc
-      const parsedStartDate = new Date(startDate);
-      const parsedEndDate = new Date(endDate);
-
-      // Kiểm tra tính hợp lệ của các ngày
-      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'startDate hoặc endDate không hợp lệ.'
-          });
-      }
-
-      if (parsedStartDate > parsedEndDate) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'startDate phải sớm hơn endDate.'
-          });
-      }
-
-      // Phân trang
-      const parsedPageNumber = parseInt(pageNumber, 10);
-      const parsedPageSize = parseInt(pageSize, 10);
-      const skip = (parsedPageNumber - 1) * parsedPageSize;
-
-      const totalRecords = await ExitRecord.countDocuments({
-        exitTime: {
-          $gte: parsedStartDate, 
-          $lte: parsedEndDate 
-        },
-        isDelete: false
+    // Kiểm tra trường hợp thiếu startDate hoặc endDate
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu trường startDate hoặc endDate trong body request.",
       });
+    }
 
-      if (totalRecords === 0) {
-          return res.status(404).json({
-              status: 404,
-              data: null,
-              error: 'Không tìm thấy bản ghi ExitRecord nào trong khoảng thời gian này.'
-          });
-      }
+    // Chuyển đổi ngày bắt đầu và ngày kết thúc
+    const parsedStartDate = new Date(startDate);
+    const parsedEndDate = new Date(endDate);
 
-      const records = await ExitRecord.find({
-          exitTime: {
-              $gte: parsedStartDate,
-              $lte: parsedEndDate
-          },
-          isDelete: false
-      })
+    // Kiểm tra tính hợp lệ của các ngày
+    if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "startDate hoặc endDate không hợp lệ.",
+      });
+    }
+
+    if (parsedStartDate > parsedEndDate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "startDate phải sớm hơn endDate.",
+      });
+    }
+
+    // Phân trang
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+
+    const totalRecords = await ExitRecord.countDocuments({
+      exitTime: {
+        $gte: parsedStartDate,
+        $lte: parsedEndDate,
+      },
+      isDelete: false,
+    });
+
+    if (totalRecords === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error:
+          "Không tìm thấy bản ghi ExitRecord nào trong khoảng thời gian này.",
+      });
+    }
+
+    const records = await ExitRecord.find({
+      exitTime: {
+        $gte: parsedStartDate,
+        $lte: parsedEndDate,
+      },
+      isDelete: false,
+    })
       .populate({
-          path: 'entry_recordId',
-          model: 'EntryRecord',
-          select: 'entryTime licensePlate vehicleType'
+        path: "entry_recordId",
+        model: "EntryRecord",
+        select: "entryTime licensePlate vehicleType",
       })
       .sort({ exitTime: -1 })
       .skip(skip)
       .limit(parsedPageSize);
 
-    const updatedRecords = exitRecords.map(record => ({
+    const updatedRecords = exitRecords.map((record) => ({
       ...record.toObject(),
-      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
-      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+      picture_front: record.picture_front
+        ? `${process.env.MINIO_SERVER_URL}${record.picture_front}`
+        : "",
+      picture_back: record.picture_back
+        ? `${process.env.MINIO_SERVER_URL}${record.picture_back}`
+        : "",
     }));
 
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
@@ -352,17 +375,20 @@ const GetExitRecordsByDateRange = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-      console.error(`Lỗi không xác định trong GetExitRecordsByDateRange từ ExitRecord:`, error);
-      return res.status(500).json({
-          status: 500,
-          data: null,
-          error: 'Lỗi máy chủ không xác định.'
-      });
+    console.error(
+      `Lỗi không xác định trong GetExitRecordsByDateRange từ ExitRecord:`,
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
   }
 };
 
@@ -375,7 +401,7 @@ const GetExitRecordsByVehicleType = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu trường vehicleType trong body request.'
+        error: "Thiếu trường vehicleType trong body request.",
       });
     }
 
@@ -384,28 +410,32 @@ const GetExitRecordsByVehicleType = async (req, res) => {
     const skip = (parsedPageNumber - 1) * parsedPageSize;
 
     const totalRecords = await ExitRecord.countDocuments({ vehicleType });
-    
+
     if (totalRecords === 0) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy bản ghi ExitRecord với loại xe này.'
+        error: "Không tìm thấy bản ghi ExitRecord với loại xe này.",
       });
     }
 
     const exitRecords = await ExitRecord.find({ vehicleType })
       .populate({
-        path: 'entry_recordId',
-        model: 'EntryRecord',
-        select: 'entryTime licensePlate vehicleType'
+        path: "entry_recordId",
+        model: "EntryRecord",
+        select: "entryTime licensePlate vehicleType",
       })
       .skip(skip)
       .limit(parsedPageSize);
 
-   const updatedRecords = records.map(record => ({
+    const updatedRecords = records.map((record) => ({
       ...record.toObject(),
-      picture_front: record.picture_front ? `${process.env.MINIO_SERVER_URL}${record.picture_front}` : '',
-      picture_back: record.picture_back ? `${process.env.MINIO_SERVER_URL}${record.picture_back}` : ''
+      picture_front: record.picture_front
+        ? `${process.env.MINIO_SERVER_URL}${record.picture_front}`
+        : "",
+      picture_back: record.picture_back
+        ? `${process.env.MINIO_SERVER_URL}${record.picture_back}`
+        : "",
     }));
 
     const totalPages = Math.ceil(totalRecords / parsedPageSize);
@@ -417,16 +447,19 @@ const GetExitRecordsByVehicleType = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error(`Lỗi trong GetExitRecordsByVehicleType từ ExitRecord:`, error);
+    console.error(
+      `Lỗi trong GetExitRecordsByVehicleType từ ExitRecord:`,
+      error
+    );
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -440,7 +473,7 @@ const CountVehicleExitRecord = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu trường date trong body request.',
+        error: "Thiếu trường date trong body request.",
       });
     }
 
@@ -452,7 +485,7 @@ const CountVehicleExitRecord = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'date không hợp lệ.',
+        error: "date không hợp lệ.",
       });
     }
 
@@ -461,7 +494,9 @@ const CountVehicleExitRecord = async (req, res) => {
     const endOfDay = new Date(parsedDate.setHours(23, 59, 59, 999));
 
     // Lấy danh sách các entryRecordId cho các xe đã ra (isOut: true)
-    const entryRecordIds = await EntryRecord.find({ isOut: true }).distinct('_id');
+    const entryRecordIds = await EntryRecord.find({ isOut: true }).distinct(
+      "_id"
+    );
 
     // Sử dụng aggregation để nhóm và đếm số lượng xe theo vehicleType
     const vehicleCounts = await ExitRecord.aggregate([
@@ -498,18 +533,20 @@ const CountVehicleExitRecord = async (req, res) => {
       error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong CountVehicleExitRecord:', error);
+    console.error("Lỗi trong CountVehicleExitRecord:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.',
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const calculateParkingFee = async (vehicleType, hoursParked) => {
   // Lấy danh sách giá cho loại xe cụ thể
-  const parkingRates = await ParkingRate.find({ vehicleType }).sort({ hourly: 1 });
+  const parkingRates = await ParkingRate.find({ vehicleType }).sort({
+    hourly: 1,
+  });
 
   // Lấy mức giá cao nhất trong ngày (thường là 24 giờ)
   const maxRate = parkingRates[parkingRates.length - 1];
@@ -550,13 +587,13 @@ const calculateParkingFee = async (vehicleType, hoursParked) => {
 
 const CreateExitRecord = async (req, res) => {
   try {
-    const { 
-      entry_recordId, 
-      picture_front, 
-      picture_back, 
-      licensePlate, 
-      isResident, 
-      vehicleType 
+    const {
+      entry_recordId,
+      picture_front,
+      picture_back,
+      licensePlate,
+      isResident,
+      vehicleType,
     } = req.body;
 
     // exitTime sẽ là thời gian hiện tại
@@ -567,21 +604,21 @@ const CreateExitRecord = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'entry_recordId không hợp lệ.'
+        error: "entry_recordId không hợp lệ.",
       });
     }
 
     // Kiểm tra xem entry_recordId có tồn tại trong EntryRecord và isOut là false
-    const entryRecord = await EntryRecord.findOne({ 
-      _id: entry_recordId, 
-      isOut: false 
+    const entryRecord = await EntryRecord.findOne({
+      _id: entry_recordId,
+      isOut: false,
     });
 
     if (!entryRecord) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Bản ghi entry không tồn tại hoặc đã ra ngoài.'
+        error: "Bản ghi entry không tồn tại hoặc đã ra ngoài.",
       });
     }
 
@@ -590,7 +627,7 @@ const CreateExitRecord = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'licensePlate không khớp với bản ghi EntryRecord.'
+        error: "licensePlate không khớp với bản ghi EntryRecord.",
       });
     }
 
@@ -598,7 +635,7 @@ const CreateExitRecord = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'isResident không khớp với bản ghi EntryRecord.'
+        error: "isResident không khớp với bản ghi EntryRecord.",
       });
     }
 
@@ -606,106 +643,108 @@ const CreateExitRecord = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'vehicleType không khớp với bản ghi EntryRecord.'
+        error: "vehicleType không khớp với bản ghi EntryRecord.",
       });
     }
 
     // Kiểm tra hợp lệ cho picture_front và picture_back (nếu có yêu cầu)
-    if (picture_front && typeof picture_front !== 'string') {
+    if (picture_front && typeof picture_front !== "string") {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'picture_front phải là một chuỗi.'
+        error: "picture_front phải là một chuỗi.",
       });
     }
 
-    if (picture_back && typeof picture_back !== 'string') {
+    if (picture_back && typeof picture_back !== "string") {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'picture_back phải là một chuỗi.'
+        error: "picture_back phải là một chuỗi.",
       });
     }
 
     // Hàm cắt URL, giữ lại đường dẫn tương đối
     const extractRelativePath = (url) => {
       const serverUrl = process.env.MINIO_SERVER_URL; // Lấy URL server từ biến môi trường
-      return url.replace(serverUrl, ''); // Loại bỏ URL của MinIO, chỉ giữ lại phần đường dẫn
+      return url.replace(serverUrl, ""); // Loại bỏ URL của MinIO, chỉ giữ lại phần đường dẫn
     };
 
     const relativePictureFront = extractRelativePath(picture_front);
     const relativePictureBack = extractRelativePath(picture_back);
 
-   // Tính thời gian đỗ xe
-   const duration = Math.abs(new Date(exitTime) - new Date(entryRecord.entryTime));
-   const hoursParked = Math.ceil(duration / (1000 * 60 * 60)); // Làm tròn lên theo giờ
+    // Tính thời gian đỗ xe
+    const duration = Math.abs(
+      new Date(exitTime) - new Date(entryRecord.entryTime)
+    );
+    const hoursParked = Math.ceil(duration / (1000 * 60 * 60)); // Làm tròn lên theo giờ
 
-   let parkingFee = 0;
+    let parkingFee = 0;
 
-   // Nếu không phải cư dân, tính phí đỗ xe
-   if (!isResident) {
-     parkingFee = await calculateParkingFee(vehicleType, hoursParked);
-   }
+    // Nếu không phải cư dân, tính phí đỗ xe
+    if (!isResident) {
+      parkingFee = await calculateParkingFee(vehicleType, hoursParked);
+    }
 
-   // Tạo bản ghi ExitRecord mới
-   const newExitRecord = new ExitRecord({
-    entry_recordId,
-    exitTime,
-    picture_front: relativePictureFront,  // Lưu phần đường dẫn tương đối
-    picture_back: relativePictureBack,    // Lưu phần đường dẫn tương đối
-    licensePlate,
-    isResident,
-    vehicleType
-  });
+    // Tạo bản ghi ExitRecord mới
+    const newExitRecord = new ExitRecord({
+      entry_recordId,
+      exitTime,
+      picture_front: relativePictureFront, // Lưu phần đường dẫn tương đối
+      picture_back: relativePictureBack, // Lưu phần đường dẫn tương đối
+      licensePlate,
+      isResident,
+      vehicleType,
+    });
 
-   // Lưu bản ghi vào cơ sở dữ liệu
-   await newExitRecord.save();
+    // Lưu bản ghi vào cơ sở dữ liệu
+    await newExitRecord.save();
 
-   // Cập nhật isOut của EntryRecord thành true
-   entryRecord.isOut = true;
-   await entryRecord.save();
+    // Cập nhật isOut của EntryRecord thành true
+    entryRecord.isOut = true;
+    await entryRecord.save();
 
-   // Nếu không phải cư dân, lưu phí đỗ xe vào VisitorHistoryMoney
-   if (!isResident) {
-     const newVisitorHistoryMoney = new VisitorHistoryMoney({
-       exit_recordId: newExitRecord._id,
-       licensePlate,
-       dateTime: exitTime,
-       hourly: hoursParked,
-       vehicleType,
-       parkingFee
-     });
+    // Nếu không phải cư dân, lưu phí đỗ xe vào VisitorHistoryMoney
+    if (!isResident) {
+      const newVisitorHistoryMoney = new VisitorHistoryMoney({
+        exit_recordId: newExitRecord._id,
+        licensePlate,
+        dateTime: exitTime,
+        hourly: hoursParked,
+        vehicleType,
+        parkingFee,
+      });
 
-     await newVisitorHistoryMoney.save();
+      await newVisitorHistoryMoney.save();
 
-     // Trả về phản hồi với thông tin về thời gian đỗ xe và phí đỗ xe
-     return res.status(201).json({
-       status: 201,
-       data: {
-         newExitRecord,
-         parkingDetails: {
-           hoursParked,
-           parkingFee
-         }
-       },
-       error: null
-     });
-   }
+      // Trả về phản hồi với thông tin về thời gian đỗ xe và phí đỗ xe
+      return res.status(201).json({
+        status: 201,
+        data: {
+          newExitRecord,
+          parkingDetails: {
+            hoursParked,
+            parkingFee,
+          },
+        },
+        error: null,
+      });
+    }
 
-   // Trả về phản hồi thành công cho cư dân (không tính phí đỗ xe)
-   return res.status(201).json({
-     status: 201,
-     data: newExitRecord,
-     error: null
-   });
- } catch (error) {
-   console.error('Lỗi trong CreateExitRecord từ ExitRecord:', error);
-   return res.status(500).json({
-     status: 500,
-     data: null,
-     error: 'Lỗi máy chủ không xác định.'
-   });
- }
+    // Trả về phản hồi thành công cho cư dân (không tính phí đỗ xe)
+    return res.status(201).json({
+      status: 201,
+      data: newExitRecord,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong CreateExitRecord từ ExitRecord:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
 };
 
 module.exports = {
@@ -716,5 +755,5 @@ module.exports = {
   GetExitRecordsByDateRange,
   GetExitRecordsByVehicleType,
   CountVehicleExitRecord,
-  CreateExitRecord
+  CreateExitRecord,
 };
