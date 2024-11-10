@@ -743,14 +743,26 @@ const FilterResidentHistoryMoneys = async (req, res) => {
       });
     }
 
-    // Thêm tính toán isExpired vào từng bản ghi
+    // Sort by vehicleId and endDate to get the latest endDate for each vehicleId
+    pipeline.push({ $sort: { vehicleId: 1, endDate: -1 } });
+
+    // Group by vehicleId and select the latest endDate
+    pipeline.push({
+      $group: {
+        _id: "$vehicleId",
+        doc: { $first: "$$ROOT" } // Take the first document in each group after sorting
+      }
+    });
+
+    // Unwind to retrieve documents
+    pipeline.push({ $replaceRoot: { newRoot: "$doc" } });
+
     pipeline.push({
       $addFields: {
         isExpired: { $lt: ['$endDate', currentDate] }
       }
     });
 
-    // Sử dụng $facet để thực hiện cả phân trang và đếm tổng bản ghi trong một truy vấn
     pipeline.push({
       $facet: {
         paginatedResults: [{ $skip: skip }, { $limit: parsedPageSize }],
@@ -758,7 +770,6 @@ const FilterResidentHistoryMoneys = async (req, res) => {
       }
     });
 
-    // Thực hiện aggregation
     const results = await ResidentHistoryMoney.aggregate(pipeline);
 
     const residentHistoryMoneys = results[0].paginatedResults;
