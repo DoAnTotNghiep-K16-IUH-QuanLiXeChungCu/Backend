@@ -3,36 +3,28 @@ const Schema = mongoose.Schema;
 
 const settingSchema = new Schema(
   {
-    entryPort: {
+    version: {
       type: String,
       required: true,
     },
-    entryBau: {
-      type: Number,
+    entryLane: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lane",
       required: true,
     },
-    exitPort: {
-      type: String,
+    exitLane: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lane",
       required: true,
     },
-    exitBau: {
-      type: Number,
+    secondaryEntryLane: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lane",
       required: true,
     },
-    camera1: {
-      type: String,
-      required: true,
-    },
-    camera2: {
-      type: String,
-      required: true,
-    },
-    camera3: {
-      type: String,
-      required: true,
-    },
-    camera4: {
-      type: String,
+    secondaryExitLane: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lane",
       required: true,
     },
   },

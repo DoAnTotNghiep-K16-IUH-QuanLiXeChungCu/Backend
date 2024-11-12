@@ -3,7 +3,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
 const mongoose = require("mongoose");
 
-const GetSetting = async (req, res) => {
+const GetSettings = async (req, res) => {
   try {
     const { pageNumber = 1, pageSize = 10 } = req.body;
 
@@ -30,18 +30,52 @@ const GetSetting = async (req, res) => {
     const skip = (parsedPageNumber - 1) * parsedPageSize;
 
     // Lấy tất cả các bản ghi
-    const totalRecords = await Setting.countDocuments();
-    const settings = await Setting.find().skip(skip).limit(parsedPageSize);
+    const totalSettings = await Setting.countDocuments();
+    const settings = await Setting.find()
+      .populate({
+        path: "entryLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      })
+      .populate({
+        path: "exitLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      })
+      .populate({
+        path: "secondaryEntryLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      })
+      .populate({
+        path: "secondaryExitLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      })
+      .skip(skip)
+      .limit(parsedPageSize);
 
-    if (totalRecords === 0) {
+    if (totalSettings === 0) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: "Không có setting  nào được tìm thấy.",
+        error: "Không có setting nào được tìm thấy.",
       });
     }
 
-    const totalPages = Math.ceil(totalRecords / parsedPageSize);
+    const totalPages = Math.ceil(totalSettings / parsedPageSize);
 
     return res.status(200).json({
       status: 200,
@@ -49,7 +83,7 @@ const GetSetting = async (req, res) => {
         settings,
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
-        totalRecords,
+        totalSettings,
         totalPages,
       },
       error: null,
@@ -63,6 +97,7 @@ const GetSetting = async (req, res) => {
     });
   }
 };
+
 const GetSettingByID = async (req, res) => {
   try {
     const { id } = req.body;
@@ -75,7 +110,39 @@ const GetSettingByID = async (req, res) => {
       });
     }
 
-    const setting = await Setting.findById(id);
+    const setting = await Setting.findById(id)
+      .populate({
+        path: "entryLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      })
+      .populate({
+        path: "exitLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      })
+      .populate({
+        path: "secondaryEntryLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      })
+      .populate({
+        path: "secondaryExitLane",
+        select: "name camera1 camera2 port",
+        populate: [
+          { path: "camera1", model: "Camera", select: "name deviceID" },
+          { path: "camera2", model: "Camera", select: "name deviceID" },
+        ],
+      });
 
     if (!setting) {
       return res.status(404).json({
@@ -91,7 +158,7 @@ const GetSettingByID = async (req, res) => {
       error: null,
     });
   } catch (error) {
-    console.error("Lỗi trong getSettingByID:", error);
+    console.error("Lỗi trong GetSettingByID:", error);
     return res.status(500).json({
       status: 500,
       data: null,
@@ -102,17 +169,8 @@ const GetSettingByID = async (req, res) => {
 
 const UpdateSetting = async (req, res) => {
   try {
-    const {
-      id,
-      entryPort,
-      entryBau,
-      exitPort,
-      exitBau,
-      camera1,
-      camera2,
-      camera3,
-      camera4,
-    } = req.body;
+    const { id, entryLane, exitLane, secondaryEntryLane, secondaryExitLane } =
+      req.body;
 
     // Kiểm tra id hợp lệ
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -123,6 +181,7 @@ const UpdateSetting = async (req, res) => {
       });
     }
 
+    // Tìm bản ghi Setting
     const setting = await Setting.findById(id);
 
     if (!setting) {
@@ -134,21 +193,41 @@ const UpdateSetting = async (req, res) => {
     }
 
     // Cập nhật các trường cần thiết
-    setting.entryPort = entryPort || setting.entryPort;
-    setting.entryBau = entryBau || setting.entryBau;
-    setting.exitPort = exitPort || setting.exitPort;
-    setting.exitBau = exitBau || setting.exitBau;
-    setting.camera1 = camera1 || setting.camera1;
-    setting.camera2 = camera2 || setting.camera2;
-    setting.camera3 = camera3 || setting.camera3;
-    setting.camera4 = camera4 || setting.camera4;
+    if (entryLane && mongoose.Types.ObjectId.isValid(entryLane)) {
+      setting.entryLane = entryLane;
+    }
+    if (exitLane && mongoose.Types.ObjectId.isValid(exitLane)) {
+      setting.exitLane = exitLane;
+    }
+    if (
+      secondaryEntryLane &&
+      mongoose.Types.ObjectId.isValid(secondaryEntryLane)
+    ) {
+      setting.secondaryEntryLane = secondaryEntryLane;
+    }
+    if (
+      secondaryExitLane &&
+      mongoose.Types.ObjectId.isValid(secondaryExitLane)
+    ) {
+      setting.secondaryExitLane = secondaryExitLane;
+    }
 
     // Lưu lại bản ghi đã cập nhật
     await setting.save();
 
+    // Populate thông tin lane và camera để trả về đầy đủ chi tiết
+    const updateSetting = await setting.populate({
+      path: "entryLane exitLane secondaryEntryLane secondaryExitLane",
+      select: "name camera1 camera2 port",
+      populate: [
+        { path: "camera1", model: "Camera", select: "name deviceID" },
+        { path: "camera2", model: "Camera", select: "name deviceID" },
+      ],
+    });
+
     return res.status(200).json({
       status: 200,
-      data: setting,
+      data: updateSetting,
       error: null,
     });
   } catch (error) {
@@ -162,7 +241,7 @@ const UpdateSetting = async (req, res) => {
 };
 
 module.exports = {
-  GetSetting,
+  GetSettings,
   GetSettingByID,
   UpdateSetting,
 };

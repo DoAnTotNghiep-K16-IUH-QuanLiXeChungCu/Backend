@@ -26,6 +26,8 @@ db.createCollection("shift");
 // Tạo bảng rfid_cards
 db.createCollection("rfid_cards");
 db.createCollection("setting");
+db.createCollection("lane");
+db.createCollection("camera");
 
 db.users.insertMany([
   {
@@ -923,14 +925,75 @@ db.rfid_cards.insertMany([
     createdAt: ISODate("2024-01-02T00:00:00.000Z"),
   },
 ]);
-db.setting.insertOne({
-  _id: ObjectId("69aae4843ae33121e0de8501"),
-  entryPort: "COM5",
-  entryBau: 9600,
-  exitPort: "COM6",
-  exitBau: 4800,
-  camera1: "1",
-  camera2: "2",
-  camera3: "3",
-  camera4: "4",
-});
+
+db.camera.insertMany([
+  {
+    _id: ObjectId("69aae4843ae33121e0de8501"),
+    name: "camera1",
+    deviceID:
+      "a9c5af4ab84be0e05d522accfe6c0ba9ac3bb6fb6c83bafc44703d223dda94a1",
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8502"),
+    name: "camera2",
+    deviceID:
+      "c956ea6ca62190ceaf3e5e39f8c7ed11f541a427281e13934273c580c58c94a5",
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8503"),
+    name: "camera3",
+    deviceID:
+      "1532d5036af82ff1488c56c868acf0950f3bef9d1de5d0db94b76d0242b83adb",
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8504"),
+    name: "camera4",
+    deviceID:
+      "2e5639783147ec043ae691e4bb0c59771ae2ba67c5c991075a13c268e6fd675c",
+  },
+]);
+
+db.lane.insertMany([
+  {
+    _id: ObjectId("69aae4843ae33121e0de8501"),
+    name: "entryLane",
+    camera1: ObjectId("69aae4843ae33121e0de8501"),
+    camera2: ObjectId("69aae4843ae33121e0de8502"),
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8502"),
+    name: "exitLane",
+    camera1: ObjectId("69aae4843ae33121e0de8501"),
+    camera2: ObjectId("69aae4843ae33121e0de8503"),
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8503"),
+    name: "secondaryEntryLane",
+    camera1: ObjectId("69aae4843ae33121e0de8501"),
+    camera2: ObjectId("69aae4843ae33121e0de8502"),
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8504"),
+    name: "secondaryExitLane",
+    camera1: ObjectId("69aae4843ae33121e0de8501"),
+    camera2: ObjectId("69aae4843ae33121e0de8502"),
+  },
+]);
+db.setting.insertMany([
+  {
+    _id: ObjectId("69aae4843ae33121e0de8501"),
+    version: "ver1",
+    entryLane: ObjectId("69aae4843ae33121e0de8501"),
+    exitLane: ObjectId("69aae4843ae33121e0de8502"),
+    secondaryEntryLane: ObjectId("69aae4843ae33121e0de8503"),
+    secondaryExitLane: ObjectId("69aae4843ae33121e0de8504"),
+  },
+  {
+    _id: ObjectId("69aae4843ae33121e0de8502"),
+    version: "ver2",
+    entryLane: ObjectId("69aae4843ae33121e0de8502"),
+    exitLane: ObjectId("69aae4843ae33121e0de8503"),
+    secondaryEntryLane: ObjectId("69aae4843ae33121e0de8504"),
+    secondaryExitLane: ObjectId("69aae4843ae33121e0de8501"),
+  },
+]);
