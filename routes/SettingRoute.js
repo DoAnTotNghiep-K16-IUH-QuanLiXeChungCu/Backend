@@ -17,4 +17,14 @@ router.post(
   middleware.verifyToken,
   settingController.UpdateSetting
 );
+// router.put(
+//   "/CreateSetting",
+//   middleware.verifyToken,
+//   settingController.CreateSetting
+// );
+// router.delete(
+//   "/DeleteSetting",
+//   middleware.verifyToken,
+//   settingController.DeleteSetting
+// );
 module.exports = router;

@@ -959,24 +959,28 @@ db.lane.insertMany([
     name: "entryLane",
     camera1: ObjectId("69aae4843ae33121e0de8501"),
     camera2: ObjectId("69aae4843ae33121e0de8502"),
+    port: "COM5",
   },
   {
     _id: ObjectId("69aae4843ae33121e0de8502"),
     name: "exitLane",
     camera1: ObjectId("69aae4843ae33121e0de8501"),
     camera2: ObjectId("69aae4843ae33121e0de8503"),
+    port: "COM9",
   },
   {
     _id: ObjectId("69aae4843ae33121e0de8503"),
     name: "secondaryEntryLane",
     camera1: ObjectId("69aae4843ae33121e0de8501"),
     camera2: ObjectId("69aae4843ae33121e0de8502"),
+    port: "COM2",
   },
   {
     _id: ObjectId("69aae4843ae33121e0de8504"),
     name: "secondaryExitLane",
     camera1: ObjectId("69aae4843ae33121e0de8501"),
     camera2: ObjectId("69aae4843ae33121e0de8502"),
+    port: "COM3",
   },
 ]);
 db.setting.insertMany([

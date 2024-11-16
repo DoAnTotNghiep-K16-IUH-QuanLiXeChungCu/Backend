@@ -1,8 +1,8 @@
-const Vehicle = require('../models/Vehicle');
-const Customer = require('../models/Customer');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const s3Client = new S3Client({ region: 'your-region' });
-const mongoose = require('mongoose');
+const Vehicle = require("../models/Vehicle");
+const Customer = require("../models/Customer");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3Client = new S3Client({ region: "your-region" });
+const mongoose = require("mongoose");
 
 const GetAllVehicles = async (req, res) => {
   try {
@@ -16,7 +16,7 @@ const GetAllVehicles = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -24,7 +24,7 @@ const GetAllVehicles = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -36,15 +36,15 @@ const GetAllVehicles = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không có phương tiện nào được tìm thấy.'
+        error: "Không có phương tiện nào được tìm thấy.",
       });
     }
 
     const vehicles = await Vehicle.find({ isDelete: false })
       .populate({
-        path: 'customerId', // Liên kết với bảng Customer
-        model: 'Customer',  // Lấy dữ liệu từ bảng Customer
-        select: 'fullName phoneNumber' // Chỉ lấy các trường cần thiết từ bảng Customer
+        path: "customerId", // Liên kết với bảng Customer
+        model: "Customer", // Lấy dữ liệu từ bảng Customer
+        select: "fullName phoneNumber", // Chỉ lấy các trường cần thiết từ bảng Customer
       })
       .sort({ licensePlate: 1 }) // Sắp xếp theo biển số xe
       .skip(skip)
@@ -54,7 +54,7 @@ const GetAllVehicles = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy phương tiện nào cho trang này.'
+        error: "Không tìm thấy phương tiện nào cho trang này.",
       });
     }
 
@@ -67,60 +67,59 @@ const GetAllVehicles = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi không xác định trong GetAllVehicles:', error);
+    console.error("Lỗi không xác định trong GetAllVehicles:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const GetVehicleById = async (req, res) => {
-    try {
-      const { id } = req.body;
-  
-      if (!id) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: 'Thiếu id trong body request.'
-        });
-      }
-  
-      const vehicle = await Vehicle.findById(id)
-        .populate({
-          path: 'customerId', // Liên kết với bảng Customer
-          model: 'Customer',  // Lấy dữ liệu từ bảng Customer
-          select: 'fullName phoneNumber' // Chỉ lấy các trường cần thiết từ bảng Customer
-        });
-  
-      if (!vehicle) {
-        return res.status(404).json({
-          status: 404,
-          data: null,
-          error: 'Không tìm thấy phương tiện với id này.'
-        });
-      }
-  
-      return res.status(200).json({
-        status: 200,
-        data: vehicle,
-        error: null
-      });
-    } catch (error) {
-      console.error('Lỗi trong FindVehicleById:', error);
-      return res.status(500).json({
-        status: 500,
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        status: 400,
         data: null,
-        error: 'Lỗi máy chủ không xác định.'
+        error: "Thiếu id trong body request.",
       });
     }
+
+    const vehicle = await Vehicle.findById(id).populate({
+      path: "customerId", // Liên kết với bảng Customer
+      model: "Customer", // Lấy dữ liệu từ bảng Customer
+      select: "fullName phoneNumber", // Chỉ lấy các trường cần thiết từ bảng Customer
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy phương tiện với id này.",
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: vehicle,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong FindVehicleById:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
 };
 
 const GetVehicleByCustomerId = async (req, res) => {
@@ -131,36 +130,38 @@ const GetVehicleByCustomerId = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu customerId trong body request.'
+        error: "Thiếu customerId trong body request.",
       });
     }
 
-    const vehicles = await Vehicle.find({ customerId, isDelete: false })
-      .populate({
-        path: 'customerId', // Liên kết với bảng Customer
-        model: 'Customer',  // Lấy dữ liệu từ bảng Customer
-        select: 'fullName phoneNumber' // Chỉ lấy các trường cần thiết từ bảng Customer
-      });
+    const vehicles = await Vehicle.find({
+      customerId,
+      isDelete: false,
+    }).populate({
+      path: "customerId", // Liên kết với bảng Customer
+      model: "Customer", // Lấy dữ liệu từ bảng Customer
+      select: "fullName phoneNumber", // Chỉ lấy các trường cần thiết từ bảng Customer
+    });
 
     if (vehicles.length === 0) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy phương tiện nào với customerId này.'
+        error: "Không tìm thấy phương tiện nào với customerId này.",
       });
     }
 
     return res.status(200).json({
       status: 200,
       data: vehicles,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong FindVehicleByCustomerId:', error);
+    console.error("Lỗi trong FindVehicleByCustomerId:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -173,36 +174,38 @@ const GetVehicleByLicensePlate = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu licensePlate trong body request.'
+        error: "Thiếu licensePlate trong body request.",
       });
     }
 
-    const vehicle = await Vehicle.findOne({ licensePlate, isDelete: false })
-      .populate({
-        path: 'customerId',
-        model: 'Customer',
-        select: 'fullName phoneNumber'
-      });
+    const vehicle = await Vehicle.findOne({
+      licensePlate,
+      isDelete: false,
+    }).populate({
+      path: "customerId",
+      model: "Customer",
+      select: "fullName phoneNumber",
+    });
 
     if (!vehicle) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy phương tiện nào với biển số này.'
+        error: "Không tìm thấy phương tiện nào với biển số này.",
       });
     }
 
     return res.status(200).json({
       status: 200,
       data: vehicle,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong GetVehicleByLicensePlate:', error);
+    console.error("Lỗi trong GetVehicleByLicensePlate:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -215,36 +218,35 @@ const GetVehiclesByType = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu type trong body request.'
+        error: "Thiếu type trong body request.",
       });
     }
 
-    const vehicles = await Vehicle.find({ type, isDelete: false })
-      .populate({
-        path: 'customerId',
-        model: 'Customer',
-        select: 'fullName phoneNumber'
-      });
+    const vehicles = await Vehicle.find({ type, isDelete: false }).populate({
+      path: "customerId",
+      model: "Customer",
+      select: "fullName phoneNumber",
+    });
 
     if (vehicles.length === 0) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy phương tiện nào với loại này.'
+        error: "Không tìm thấy phương tiện nào với loại này.",
       });
     }
 
     return res.status(200).json({
       status: 200,
       data: vehicles,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong GetVehiclesByType:', error);
+    console.error("Lỗi trong GetVehiclesByType:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -257,36 +259,38 @@ const GetVehiclesByBrand = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Thiếu brand trong body request.'
+        error: "Thiếu brand trong body request.",
       });
     }
 
-    const vehicles = await Vehicle.find({ brand: { $regex: new RegExp(brand, 'i') }, isDelete: false })
-      .populate({
-        path: 'customerId',
-        model: 'Customer',
-        select: 'fullName phoneNumber'
-      });
+    const vehicles = await Vehicle.find({
+      brand: { $regex: new RegExp(brand, "i") },
+      isDelete: false,
+    }).populate({
+      path: "customerId",
+      model: "Customer",
+      select: "fullName phoneNumber",
+    });
 
     if (vehicles.length === 0) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy phương tiện nào với nhãn hiệu này.'
+        error: "Không tìm thấy phương tiện nào với nhãn hiệu này.",
       });
     }
 
     return res.status(200).json({
       status: 200,
       data: vehicles,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong GetVehiclesByBrand:', error);
+    console.error("Lỗi trong GetVehiclesByBrand:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -300,7 +304,7 @@ const CreateVehicle = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'customerId không hợp lệ.'
+        error: "customerId không hợp lệ.",
       });
     }
 
@@ -310,7 +314,7 @@ const CreateVehicle = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'customerId không tồn tại.'
+        error: "customerId không tồn tại.",
       });
     }
 
@@ -318,60 +322,62 @@ const CreateVehicle = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Các trường licensePlate, type, color, và brand đều bắt buộc.'
+        error: "Các trường licensePlate, type, color, và brand đều bắt buộc.",
       });
     }
 
-    const validTypes = ['car', 'motor'];
+    const validTypes = ["car", "motor", "bike", "eBike"];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Giá trị type phải là "car" hoặc "motor".'
+        error: 'Giá trị type phải là "car" hoặc "motor".',
       });
     }
 
     // Kiểm tra xem licensePlate đã tồn tại chưa
     const vehicleExists = await Vehicle.findOne({ licensePlate });
     if (vehicleExists) {
-      return res.status(409).json({ // 409 Conflict status code để báo lỗi trùng lặp
+      return res.status(409).json({
+        // 409 Conflict status code để báo lỗi trùng lặp
         status: 409,
         data: null,
-        error: 'Phương tiện với biển số này đã tồn tại.'
+        error: "Phương tiện với biển số này đã tồn tại.",
       });
     }
 
-     // Tạo phương tiện mới
-     const newVehicle = new Vehicle({
+    // Tạo phương tiện mới
+    const newVehicle = new Vehicle({
       customerId,
       licensePlate,
       type,
       color,
-      brand
+      brand,
     });
 
     // Lưu vào cơ sở dữ liệu
     await newVehicle.save();
 
     // Populate để lấy thông tin chi tiết của customer
-    const vehicleWithCustomerDetails = await Vehicle.findById(newVehicle._id)
-      .populate({
-        path: 'customerId', // Populate customerId để lấy thông tin chi tiết của khách hàng
-        model: 'Customer', // Liên kết với model Customer
-        select: 'fullName phoneNumber address isResident' // Chỉ lấy các trường cần thiết
-      });
+    const vehicleWithCustomerDetails = await Vehicle.findById(
+      newVehicle._id
+    ).populate({
+      path: "customerId", // Populate customerId để lấy thông tin chi tiết của khách hàng
+      model: "Customer", // Liên kết với model Customer
+      select: "fullName phoneNumber address isResident", // Chỉ lấy các trường cần thiết
+    });
 
     return res.status(201).json({
       status: 201,
       data: vehicleWithCustomerDetails,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong CreateVehicle:', error);
+    console.error("Lỗi trong CreateVehicle:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -384,7 +390,7 @@ const UpdateVehicle = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'id không hợp lệ.'
+        error: "id không hợp lệ.",
       });
     }
 
@@ -394,7 +400,7 @@ const UpdateVehicle = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy phương tiện với id này.'
+        error: "Không tìm thấy phương tiện với id này.",
       });
     }
 
@@ -405,18 +411,18 @@ const UpdateVehicle = async (req, res) => {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'customerId không tồn tại.'
+          error: "customerId không tồn tại.",
         });
       }
     }
 
     if (type) {
-      const validTypes = ['car', 'motor'];
+      const validTypes = ["car", "motor", "bike", "eBike"];
       if (!validTypes.includes(type)) {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'Giá trị type phải là "car" hoặc "motor".'
+          error: 'Giá trị type phải là "car" hoặc "motor".',
         });
       }
     }
@@ -432,24 +438,23 @@ const UpdateVehicle = async (req, res) => {
     await vehicle.save();
 
     // Populate để lấy thông tin chi tiết của customer sau khi cập nhật
-    const updatedVehicle = await Vehicle.findById(vehicle._id)
-      .populate({
-        path: 'customerId', // Populate customerId để lấy thông tin chi tiết của khách hàng
-        model: 'Customer', // Liên kết với model Customer
-        select: 'fullName phoneNumber address isResident' // Chỉ lấy các trường cần thiết
-      });
+    const updatedVehicle = await Vehicle.findById(vehicle._id).populate({
+      path: "customerId", // Populate customerId để lấy thông tin chi tiết của khách hàng
+      model: "Customer", // Liên kết với model Customer
+      select: "fullName phoneNumber address isResident", // Chỉ lấy các trường cần thiết
+    });
 
     return res.status(200).json({
       status: 200,
       data: updatedVehicle, // Trả về thông tin phương tiện kèm theo thông tin chi tiết khách hàng
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong UpdateVehicle:', error);
+    console.error("Lỗi trong UpdateVehicle:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -462,7 +467,7 @@ const DeleteVehicle = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'id không hợp lệ.'
+        error: "id không hợp lệ.",
       });
     }
 
@@ -472,7 +477,7 @@ const DeleteVehicle = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy phương tiện với id này.'
+        error: "Không tìm thấy phương tiện với id này.",
       });
     }
 
@@ -485,18 +490,17 @@ const DeleteVehicle = async (req, res) => {
     return res.status(200).json({
       status: 200,
       data: vehicle,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong DeleteVehicle:', error);
+    console.error("Lỗi trong DeleteVehicle:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
-
 
 module.exports = {
   GetAllVehicles,
@@ -507,5 +511,5 @@ module.exports = {
   GetVehiclesByBrand,
   CreateVehicle,
   UpdateVehicle,
-  DeleteVehicle
+  DeleteVehicle,
 };

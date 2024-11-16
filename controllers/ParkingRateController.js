@@ -1,7 +1,7 @@
-const ParkingRate = require('../models/ParkingRate');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const s3Client = new S3Client({ region: 'your-region' });
-const mongoose = require('mongoose');
+const ParkingRate = require("../models/ParkingRate");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3Client = new S3Client({ region: "your-region" });
+const mongoose = require("mongoose");
 
 const GetAllParkingRates = async (req, res) => {
   try {
@@ -15,7 +15,7 @@ const GetAllParkingRates = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -23,7 +23,7 @@ const GetAllParkingRates = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -31,13 +31,15 @@ const GetAllParkingRates = async (req, res) => {
 
     // Lấy tất cả các giá cho bãi đỗ
     const totalRecords = await ParkingRate.countDocuments();
-    const parkingRates = await ParkingRate.find().skip(skip).limit(parsedPageSize);
+    const parkingRates = await ParkingRate.find()
+      .skip(skip)
+      .limit(parsedPageSize);
 
     if (totalRecords === 0) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không có giá nào được tìm thấy.'
+        error: "Không có giá nào được tìm thấy.",
       });
     }
 
@@ -50,38 +52,60 @@ const GetAllParkingRates = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong GetAllParkingRates:', error);
+    console.error("Lỗi trong GetAllParkingRates:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const CreateParkingRate = async (req, res) => {
   try {
-    const { vehicleType, hourly, price } = req.body;
+    const {
+      vehicleType,
+      hourly_rate,
+      overnight_rate,
+      daily_rate,
+      weekly_rate,
+      monthly_rate,
+      yearly_rate,
+    } = req.body;
 
     // Kiểm tra các trường bắt buộc
-    if (!vehicleType || !['car', 'motor'].includes(vehicleType) || !hourly || !price) {
+    if (
+      !vehicleType ||
+      !["car", "motor"].includes(vehicleType) ||
+      !hourly_rate ||
+      !overnight_rate ||
+      !daily_rate ||
+      !weekly_rate ||
+      !monthly_rate ||
+      !yearly_rate
+    ) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Các trường vehicleType, hourly và price đều bắt buộc và vehicleType phải là "car" hoặc "motor".'
+        error:
+          'Các trường vehicleType, hourly_rate, overnight_rate,daily_rate,weekly_rate,monthly_rate,yearly_rateđều bắt buộc và vehicleType phải là "car" hoặc "motor".',
       });
     }
 
     // Tạo giá đỗ xe mới
     const newParkingRate = new ParkingRate({
       vehicleType,
-      hourly,
-      price
+      hourly_rate,
+      overnight_rate,
+      daily_rate,
+      weekly_rate,
+      monthly_rate,
+      yearly_rate,
     });
 
     // Lưu vào cơ sở dữ liệu
@@ -90,27 +114,36 @@ const CreateParkingRate = async (req, res) => {
     return res.status(201).json({
       status: 201,
       data: newParkingRate,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong CreateParkingRate:', error);
+    console.error("Lỗi trong CreateParkingRate:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const UpdateParkingRate = async (req, res) => {
   try {
-    const { id, price, vehicleType, hourly } = req.body; // Lấy thêm vehicleType và hourly
+    const {
+      id,
+      vehicleType,
+      hourly_rate,
+      overnight_rate,
+      daily_rate,
+      weekly_rate,
+      monthly_rate,
+      yearly_rate,
+    } = req.body; // Lấy thêm vehicleType và hourly
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'ID không hợp lệ.'
+        error: "ID không hợp lệ.",
       });
     }
 
@@ -120,14 +153,26 @@ const UpdateParkingRate = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy giá đỗ xe với ID này.'
+        error: "Không tìm thấy giá đỗ xe với ID này.",
       });
     }
 
     // Cập nhật các trường cần thiết
     parkingRate.vehicleType = vehicleType || parkingRate.vehicleType;
-    parkingRate.hourly = hourly !== undefined ? hourly : parkingRate.hourly;
-    parkingRate.price = price !== undefined ? price : parkingRate.price;
+    parkingRate.hourly_rate =
+      hourly_rate !== undefined ? hourly_rate : parkingRate.hourly_rate;
+    parkingRate.overnight_rate =
+      overnight_rate !== undefined
+        ? overnight_rate
+        : parkingRate.overnight_rate;
+    parkingRate.daily_rate =
+      daily_rate !== undefined ? daily_rate : parkingRate.daily_rate;
+    parkingRate.weekly_rate =
+      weekly_rate !== undefined ? weekly_rate : parkingRate.weekly_rate;
+    parkingRate.monthly_rate =
+      monthly_rate !== undefined ? monthly_rate : parkingRate.monthly_rate;
+    parkingRate.yearly_rate =
+      yearly_rate !== undefined ? yearly_rate : parkingRate.yearly_rate;
 
     // Lưu lại bản ghi đã cập nhật
     await parkingRate.save();
@@ -135,14 +180,14 @@ const UpdateParkingRate = async (req, res) => {
     return res.status(200).json({
       status: 200,
       data: parkingRate,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong UpdateParkingRate:', error);
+    console.error("Lỗi trong UpdateParkingRate:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -155,7 +200,7 @@ const GetParkingRateById = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'ID không hợp lệ.'
+        error: "ID không hợp lệ.",
       });
     }
 
@@ -165,21 +210,21 @@ const GetParkingRateById = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy giá đỗ xe với ID này.'
+        error: "Không tìm thấy giá đỗ xe với ID này.",
       });
     }
 
     return res.status(200).json({
       status: 200,
       data: parkingRate,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong GetParkingRateById:', error);
+    console.error("Lỗi trong GetParkingRateById:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -192,7 +237,7 @@ const DeleteParkingRate = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'ID không hợp lệ.'
+        error: "ID không hợp lệ.",
       });
     }
 
@@ -202,7 +247,7 @@ const DeleteParkingRate = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy giá đỗ xe với ID này.'
+        error: "Không tìm thấy giá đỗ xe với ID này.",
       });
     }
 
@@ -211,23 +256,23 @@ const DeleteParkingRate = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      data: 'Đã xóa giá đỗ xe thành công.',
-      error: null
+      data: "Đã xóa giá đỗ xe thành công.",
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong DeleteParkingRate:', error);
+    console.error("Lỗi trong DeleteParkingRate:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 module.exports = {
-    GetAllParkingRates,
-    CreateParkingRate,
-    UpdateParkingRate,
-    GetParkingRateById,
-    DeleteParkingRate
+  GetAllParkingRates,
+  CreateParkingRate,
+  UpdateParkingRate,
+  GetParkingRateById,
+  DeleteParkingRate,
 };
