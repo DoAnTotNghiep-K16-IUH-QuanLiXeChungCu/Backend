@@ -542,48 +542,48 @@ const CountVehicleExitRecord = async (req, res) => {
   }
 };
 
-const calculateParkingFee = async (vehicleType, hoursParked) => {
-  // Lấy danh sách giá cho loại xe cụ thể
-  const parkingRates = await ParkingRate.find({ vehicleType }).sort({
-    hourly: 1,
-  });
+// const calculateParkingFee = async (vehicleType, hoursParked) => {
+//   // Lấy danh sách giá cho loại xe cụ thể
+//   const parkingRates = await ParkingRate.find({ vehicleType }).sort({
+//     hourly: 1,
+//   });
 
-  // Lấy mức giá cao nhất trong ngày (thường là 24 giờ)
-  const maxRate = parkingRates[parkingRates.length - 1];
+//   // Lấy mức giá cao nhất trong ngày (thường là 24 giờ)
+//   const maxRate = parkingRates[parkingRates.length - 1];
 
-  // Nếu thời gian đỗ <= 24h, tính giá cao nhất trong ngày đó
-  if (hoursParked <= 24) {
-    // Tìm giá tương ứng với số giờ đỗ
-    for (let rate of parkingRates) {
-      if (hoursParked <= rate.hourly) {
-        return rate.price;
-      }
-    }
-    // Trường hợp nếu vượt quá giờ lớn nhất (24h)
-    return maxRate.price;
-  }
+//   // Nếu thời gian đỗ <= 24h, tính giá cao nhất trong ngày đó
+//   if (hoursParked <= 24) {
+//     // Tìm giá tương ứng với số giờ đỗ
+//     for (let rate of parkingRates) {
+//       if (hoursParked <= rate.hourly) {
+//         return rate.price;
+//       }
+//     }
+//     // Trường hợp nếu vượt quá giờ lớn nhất (24h)
+//     return maxRate.price;
+//   }
 
-  // Nếu thời gian đỗ xe > 24h
-  let totalFee = maxRate.price; // Tính phí cho ngày đầu tiên
-  let remainingHours = hoursParked - 24; // Giờ còn lại sau ngày đầu tiên
+//   // Nếu thời gian đỗ xe > 24h
+//   let totalFee = maxRate.price; // Tính phí cho ngày đầu tiên
+//   let remainingHours = hoursParked - 24; // Giờ còn lại sau ngày đầu tiên
 
-  // Tính phí cho từng ngày sau đó, mỗi ngày là một giá trị của maxRate
-  const fullDays = Math.floor(remainingHours / 24); // Số ngày đầy đủ
-  totalFee += fullDays * maxRate.price; // Cộng thêm phí cho từng ngày
+//   // Tính phí cho từng ngày sau đó, mỗi ngày là một giá trị của maxRate
+//   const fullDays = Math.floor(remainingHours / 24); // Số ngày đầy đủ
+//   totalFee += fullDays * maxRate.price; // Cộng thêm phí cho từng ngày
 
-  // Xử lý số giờ lẻ còn lại
-  remainingHours = remainingHours % 24;
-  if (remainingHours > 0) {
-    // Tìm giá cho số giờ lẻ còn lại
-    for (let rate of parkingRates) {
-      if (remainingHours <= rate.hourly) {
-        totalFee += rate.price;
-        break;
-      }
-    }
-  }
-  return totalFee;
-};
+//   // Xử lý số giờ lẻ còn lại
+//   remainingHours = remainingHours % 24;
+//   if (remainingHours > 0) {
+//     // Tìm giá cho số giờ lẻ còn lại
+//     for (let rate of parkingRates) {
+//       if (remainingHours <= rate.hourly) {
+//         totalFee += rate.price;
+//         break;
+//       }
+//     }
+//   }
+//   return totalFee;
+// };
 
 const CreateExitRecord = async (req, res) => {
   try {
@@ -673,18 +673,18 @@ const CreateExitRecord = async (req, res) => {
     const relativePictureFront = extractRelativePath(picture_front);
     const relativePictureBack = extractRelativePath(picture_back);
 
-    // Tính thời gian đỗ xe
-    const duration = Math.abs(
-      new Date(exitTime) - new Date(entryRecord.entryTime)
-    );
-    const hoursParked = Math.ceil(duration / (1000 * 60 * 60)); // Làm tròn lên theo giờ
+    // // Tính thời gian đỗ xe
+    // const duration = Math.abs(
+    //   new Date(exitTime) - new Date(entryRecord.entryTime)
+    // );
+    // const hoursParked = Math.ceil(duration / (1000 * 60 * 60)); // Làm tròn lên theo giờ
 
-    let parkingFee = 0;
+    // let parkingFee = 0;
 
     // Nếu không phải cư dân, tính phí đỗ xe
-    if (!isResident) {
-      parkingFee = await calculateParkingFee(vehicleType, hoursParked);
-    }
+    // if (!isResident) {
+    //   parkingFee = await calculateParkingFee(vehicleType, hoursParked);
+    // }
 
     // Tạo bản ghi ExitRecord mới
     const newExitRecord = new ExitRecord({
@@ -712,7 +712,7 @@ const CreateExitRecord = async (req, res) => {
         dateTime: exitTime,
         hourly: hoursParked,
         vehicleType,
-        parkingFee,
+        // parkingFee,
       });
 
       await newVisitorHistoryMoney.save();
@@ -722,10 +722,10 @@ const CreateExitRecord = async (req, res) => {
         status: 201,
         data: {
           newExitRecord,
-          parkingDetails: {
-            hoursParked,
-            parkingFee,
-          },
+          // parkingDetails: {
+          //   hoursParked,
+          //   parkingFee,
+          // },
         },
         error: null,
       });

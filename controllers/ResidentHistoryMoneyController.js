@@ -1,482 +1,544 @@
-const Customer = require('../models/Customer');
-const ResidentHistoryMoney = require('../models/ResidentHistoryMoney');
-const Vehicle = require('../models/Vehicle');
-const ParkingSlot = require('../models/ParkingSlot');
-const mongoose = require('mongoose');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const s3Client = new S3Client({ region: 'your-region' });
+const Customer = require("../models/Customer");
+const ResidentHistoryMoney = require("../models/ResidentHistoryMoney");
+const Vehicle = require("../models/Vehicle");
+const ParkingSlot = require("../models/ParkingSlot");
+const mongoose = require("mongoose");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3Client = new S3Client({ region: "your-region" });
 
 const GetAllResidentHistoryMoneys = async (req, res) => {
-    try {
-      const { pageNumber = 1, pageSize = 10 } = req.body;
-  
-      // Kiểm tra pageNumber và pageSize
-      const parsedPageNumber = parseInt(pageNumber, 10);
-      const parsedPageSize = parseInt(pageSize, 10);
-  
-      if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
-        });
-      }
-  
-      if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
-        });
-      }
-  
-      const skip = (parsedPageNumber - 1) * parsedPageSize;
-  
-      const totalRecords = await ResidentHistoryMoney.countDocuments({ isDelete: false });
-  
-      if (totalRecords === 0) {
-        return res.status(404).json({
-          status: 404,
-          data: null,
-          error: 'Không có bản ghi nào được tìm thấy.'
-        });
-      }
-  
-      const residentHistoryMoneys = await ResidentHistoryMoney.find({ isDelete: false })
-        .populate({
-          path: 'vehicleId',
-          model: 'Vehicle',
-          select: 'licensePlate type brand' // Lấy trường name từ Vehicle
-        })
-        .populate({
-          path: 'parking_slotId',
-          model: 'ParkingSlot',
-          select: 'slotCode slotType' // Lấy trường location từ ParkingSlot
-        })
-        .sort({ startDate: 1 }) // Sắp xếp theo ngày bắt đầu
-        .skip(skip)
-        .limit(parsedPageSize);
-  
-      if (residentHistoryMoneys.length === 0) {
-        return res.status(404).json({
-          status: 404,
-          data: null,
-          error: 'Không tìm thấy bản ghi nào cho trang này.'
-        });
-      }
+  try {
+    const { pageNumber = 1, pageSize = 10 } = req.body;
 
-      const currentDate = new Date();
+    // Kiểm tra pageNumber và pageSize
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
 
-      // Thêm isExpired
-      const residentHistoryMoneysWithExpiry = residentHistoryMoneys.map(record => ({
-          ...record._doc, // Spread các thuộc tính hiện có
-          isExpired: new Date(record.endDate) < currentDate // So sánh endDate với ngày hiện tại
-      }));
-
-      const totalPages = Math.ceil(totalRecords / parsedPageSize);
-
-      return res.status(200).json({
-          status: 200,
-          data: {
-              residentHistoryMoneys: residentHistoryMoneysWithExpiry,
-              currentPage: parsedPageNumber,
-              pageSize: parsedPageSize,
-              totalRecords,
-              totalPages
-          },
-          error: null
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+
+    const totalRecords = await ResidentHistoryMoney.countDocuments({
+      isDelete: false,
+    });
+
+    if (totalRecords === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không có bản ghi nào được tìm thấy.",
+      });
+    }
+
+    const residentHistoryMoneys = await ResidentHistoryMoney.find({
+      isDelete: false,
+    })
+      .populate({
+        path: "vehicleId",
+        model: "Vehicle",
+        select: "licensePlate type brand", // Lấy trường từ Vehicle
+      })
+      .populate({
+        path: "parking_slotId",
+        model: "ParkingSlot",
+        select: "slotCode slotType", // Lấy trường từ ParkingSlot
+      })
+      .populate({
+        path: "rFIDCardID",
+        model: "RFIDCard",
+        select: "uuid status", // Lấy trường từ RFIDCard
+      })
+      .sort({ startDate: 1 }) // Sắp xếp theo ngày bắt đầu
+      .skip(skip)
+      .limit(parsedPageSize);
+
+    if (residentHistoryMoneys.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy bản ghi nào cho trang này.",
+      });
+    }
+
+    const currentDate = new Date();
+
+    // Thêm isExpired
+    const residentHistoryMoneysWithExpiry = residentHistoryMoneys.map(
+      (record) => ({
+        ...record._doc, // Spread các thuộc tính hiện có
+        isExpired: new Date(record.endDate) < currentDate, // So sánh endDate với ngày hiện tại
+      })
+    );
+
+    const totalPages = Math.ceil(totalRecords / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        residentHistoryMoneys: residentHistoryMoneysWithExpiry,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalRecords,
+        totalPages,
+      },
+      error: null,
+    });
   } catch (error) {
-      console.error('Lỗi không xác định trong GetAllResidentHistoryMoneys:', error);
-      return res.status(500).json({
-          status: 500,
-          data: null,
-          error: 'Lỗi máy chủ không xác định.'
-      });
+    console.error(
+      "Lỗi không xác định trong GetAllResidentHistoryMoneys:",
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
   }
 };
-  
 const CreateResidentHistoryMoney = async (req, res) => {
   try {
-      const { vehicleId, parking_slotId, monthlyFee, startDate, endDate } = req.body;
+    const {
+      vehicleId,
+      parking_slotId,
+      monthlyFee,
+      startDate,
+      endDate,
+      rFIDCardID,
+    } = req.body;
 
-      if (!vehicleId || !parking_slotId || !monthlyFee || !startDate || !endDate) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'Các trường bắt buộc không được để trống.'
-          });
-      }
+    // Kiểm tra các trường bắt buộc
+    if (
+      !vehicleId ||
+      !parking_slotId ||
+      !monthlyFee ||
+      !startDate ||
+      !endDate ||
+      !rFIDCardID
+    ) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Các trường bắt buộc không được để trống.",
+      });
+    }
 
-      if (!mongoose.Types.ObjectId.isValid(vehicleId)) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'vehicleId không hợp lệ.'
-          });
-      }
+    // Kiểm tra vehicleId hợp lệ
+    if (!mongoose.Types.ObjectId.isValid(vehicleId)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "vehicleId không hợp lệ.",
+      });
+    }
 
-      const vehicleExists = await Vehicle.findOne({ _id: vehicleId, isDelete: false });
-      if (!vehicleExists) {
-          return res.status(404).json({
-              status: 404,
-              data: null,
-              error: 'Không tìm thấy vehicleId trong hệ thống.'
-          });
-      }
+    const vehicleExists = await Vehicle.findOne({
+      _id: vehicleId,
+      isDelete: false,
+    });
+    if (!vehicleExists) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy vehicleId trong hệ thống.",
+      });
+    }
 
-      if (!mongoose.Types.ObjectId.isValid(parking_slotId)) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'parking_slotId không hợp lệ.'
-          });
-      }
+    // Kiểm tra parking_slotId hợp lệ
+    if (!mongoose.Types.ObjectId.isValid(parking_slotId)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "parking_slotId không hợp lệ.",
+      });
+    }
 
-      const parkingSlot = await ParkingSlot.findOne({ _id: parking_slotId });
-      if (!parkingSlot) {
-          return res.status(404).json({
-              status: 404,
-              data: null,
-              error: 'Không tìm thấy parking_slotId trong hệ thống.'
-          });
-      }
+    const parkingSlot = await ParkingSlot.findOne({ _id: parking_slotId });
+    if (!parkingSlot) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy parking_slotId trong hệ thống.",
+      });
+    }
 
-      if (parkingSlot.availableSlots <= 0) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'Không còn chỗ trống trong bãi đỗ xe này.'
-          });
-      }
+    if (parkingSlot.availableSlots <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Không còn chỗ trống trong bãi đỗ xe này.",
+      });
+    }
 
-      parkingSlot.availableSlots -= 1;
-      await parkingSlot.save();
+    // Kiểm tra rFIDCardID hợp lệ
+    if (!mongoose.Types.ObjectId.isValid(rFIDCardID)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "rFIDCardID không hợp lệ.",
+      });
+    }
 
-      if (typeof monthlyFee !== 'number' || monthlyFee <= 0) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'monthlyFee phải là một số lớn hơn 0.'
-          });
-      }
+    const rfidCardExists = await RFIDCard.findOne({
+      _id: rFIDCardID,
+      isDelete: false,
+    });
+    if (!rfidCardExists) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy rFIDCardID trong hệ thống.",
+      });
+    }
 
-      const parsedStartDate = new Date(startDate);
-      const parsedEndDate = new Date(endDate);
+    // Kiểm tra monthlyFee hợp lệ
+    if (typeof monthlyFee !== "number" || monthlyFee <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "monthlyFee phải là một số lớn hơn 0.",
+      });
+    }
 
-      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'startDate hoặc endDate không hợp lệ.'
-          });
-      }
+    // Kiểm tra startDate và endDate hợp lệ
+    const parsedStartDate = new Date(startDate);
+    const parsedEndDate = new Date(endDate);
 
-      if (parsedStartDate >= parsedEndDate) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'startDate phải sớm hơn endDate.'
-          });
-      }
+    if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "startDate hoặc endDate không hợp lệ.",
+      });
+    }
 
-      const newResidentHistoryMoney = new ResidentHistoryMoney({
-          vehicleId,
-          parking_slotId,
-          monthlyFee,
-          startDate: parsedStartDate,
-          endDate: parsedEndDate
+    if (parsedStartDate >= parsedEndDate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "startDate phải sớm hơn endDate.",
+      });
+    }
+
+    // Tạo bản ghi mới
+    const newResidentHistoryMoney = new ResidentHistoryMoney({
+      vehicleId,
+      parking_slotId,
+      monthlyFee,
+      startDate: parsedStartDate,
+      endDate: parsedEndDate,
+      rFIDCardID,
+    });
+
+    // Lưu bản ghi
+    await newResidentHistoryMoney.save();
+
+    // Populate dữ liệu
+    const populatedResidentHistoryMoney = await ResidentHistoryMoney.findById(
+      newResidentHistoryMoney._id
+    )
+      .populate({
+        path: "vehicleId",
+        model: "Vehicle",
+        populate: {
+          path: "customerId",
+          model: "Customer",
+          populate: {
+            path: "apartmentsId",
+            model: "Apartment",
+            select: "name",
+          },
+          select: "fullName phoneNumber address isResident",
+        },
+        select: "licensePlate type brand color",
+      })
+      .populate({
+        path: "parking_slotId",
+        model: "ParkingSlot",
+        select: "slotCode slotType availableSlots totalQuantity",
+      })
+      .populate({
+        path: "rFIDCardID",
+        model: "RFIDCard",
+        select: "cardCode issueDate expirationDate isActive",
       });
 
-      await newResidentHistoryMoney.save();
-      
-         // Sử dụng populate tương tự như bạn yêu cầu
-         const populatedResidentHistoryMoney = await ResidentHistoryMoney.findById(newResidentHistoryMoney._id)
-         .populate({
-           path: 'vehicleId',
-           model: 'Vehicle',
-           populate: {
-             path: 'customerId',
-             model: 'Customer',
-             populate: {
-               path: 'apartmentsId',
-               model: 'Apartment',
-               select: 'name'
-             },
-             select: 'fullName phoneNumber address isResident'
-           },
-           select: 'licensePlate type brand color'
-         })
-         .populate({
-           path: 'parking_slotId',
-           model: 'ParkingSlot',
-           select: 'slotCode slotType availableSlots totalQuantity'
-         });
- 
-       // Định dạng dữ liệu trả về theo yêu cầu
-       const formattedData = {
-         _id: populatedResidentHistoryMoney._id,
-         vehicle: {
-           _id: populatedResidentHistoryMoney.vehicleId._id,
-           customerId: populatedResidentHistoryMoney.vehicleId.customerId._id,
-           licensePlate: populatedResidentHistoryMoney.vehicleId.licensePlate,
-           type: populatedResidentHistoryMoney.vehicleId.type,
-           color: populatedResidentHistoryMoney.vehicleId.color,
-           brand: populatedResidentHistoryMoney.vehicleId.brand,
-           isDelete: false,
-           customer: {
-             _id: populatedResidentHistoryMoney.vehicleId.customerId._id,
-             apartmentsId: populatedResidentHistoryMoney.vehicleId.customerId.apartmentsId._id,
-             fullName: populatedResidentHistoryMoney.vehicleId.customerId.fullName,
-             phoneNumber: populatedResidentHistoryMoney.vehicleId.customerId.phoneNumber,
-             isResident: populatedResidentHistoryMoney.vehicleId.customerId.isResident,
-             address: populatedResidentHistoryMoney.vehicleId.customerId.address,
-             isDelete: false,
-             apartment: {
-               _id: populatedResidentHistoryMoney.vehicleId.customerId.apartmentsId._id,
-               name: populatedResidentHistoryMoney.vehicleId.customerId.apartmentsId.name
-             }
-           }
-         },
-         parkingSlot: {
-           _id: populatedResidentHistoryMoney.parking_slotId._id,
-           slotCode: populatedResidentHistoryMoney.parking_slotId.slotCode,
-           slotType: populatedResidentHistoryMoney.parking_slotId.slotType,
-           availableSlots: populatedResidentHistoryMoney.parking_slotId.availableSlots,
-           totalQuantity: populatedResidentHistoryMoney.parking_slotId.totalQuantity
-         },
-         monthlyFee: populatedResidentHistoryMoney.monthlyFee,
-         startDate: populatedResidentHistoryMoney.startDate,
-         endDate: populatedResidentHistoryMoney.endDate,
-         isDelete: populatedResidentHistoryMoney.isDelete,
-         __v: populatedResidentHistoryMoney.__v
-       };
- 
-       return res.status(201).json({
-           status: 201,
-           data: formattedData,
-           error: null
-       });
-    } catch (error) {
-        console.error('Lỗi không xác định trong CreateResidentHistoryMoney:', error);
-        return res.status(500).json({
-            status: 500,
-            data: null,
-            error: 'Lỗi máy chủ không xác định.'
-        });
-    }
- };
+    // Định dạng dữ liệu trả về
+    const formattedData = {
+      ...populatedResidentHistoryMoney._doc,
+      vehicle: {
+        ...populatedResidentHistoryMoney.vehicleId._doc,
+        customer: {
+          ...populatedResidentHistoryMoney.vehicleId.customerId._doc,
+          apartment:
+            populatedResidentHistoryMoney.vehicleId.customerId.apartmentsId,
+        },
+      },
+      parkingSlot: populatedResidentHistoryMoney.parking_slotId,
+      rFIDCard: populatedResidentHistoryMoney.rFIDCardID,
+    };
+
+    return res.status(201).json({
+      status: 201,
+      data: formattedData,
+      error: null,
+    });
+  } catch (error) {
+    console.error(
+      "Lỗi không xác định trong CreateResidentHistoryMoney:",
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 
 const UpdateResidentHistoryMoney = async (req, res) => {
   try {
-      const { id, vehicleId, parking_slotId, monthlyFee, startDate, endDate } = req.body;
+    const { id, vehicleId, parking_slotId, monthlyFee, startDate, endDate } =
+      req.body;
 
-      // Kiểm tra id bắt buộc
-      if (!id) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'id không được để trống.'
-          });
-      }
-
-      // Kiểm tra id có hợp lệ là ObjectId hay không
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'id không hợp lệ.'
-          });
-      }
-
-      // Tìm bản ghi cần cập nhật
-      const existingRecord = await ResidentHistoryMoney.findById(id);
-      if (!existingRecord) {
-          return res.status(404).json({
-              status: 404,
-              data: null,
-              error: 'Không tìm thấy bản ghi với id cung cấp.'
-          });
-      }
-
-      // Kiểm tra nếu vehicleId được cung cấp
-      if (vehicleId) {
-          if (!mongoose.Types.ObjectId.isValid(vehicleId)) {
-              return res.status(400).json({
-                  status: 400,
-                  data: null,
-                  error: 'vehicleId không hợp lệ.'
-              });
-          }
-
-          const vehicleExists = await Vehicle.findOne({ _id: vehicleId, isDelete: false });
-          if (!vehicleExists) {
-              return res.status(404).json({
-                  status: 404,
-                  data: null,
-                  error: 'Không tìm thấy vehicleId trong hệ thống.'
-              });
-          }
-
-          existingRecord.vehicleId = vehicleId;
-      }
-
-      // Kiểm tra nếu parking_slotId được cung cấp
-      if (parking_slotId) {
-          if (!mongoose.Types.ObjectId.isValid(parking_slotId)) {
-              return res.status(400).json({
-                  status: 400,
-                  data: null,
-                  error: 'parking_slotId không hợp lệ.'
-              });
-          }
-
-          const parkingSlot = await ParkingSlot.findOne({ _id: parking_slotId });
-          if (!parkingSlot) {
-              return res.status(404).json({
-                  status: 404,
-                  data: null,
-                  error: 'Không tìm thấy parking_slotId trong hệ thống.'
-              });
-          }
-
-          // Kiểm tra availableSlots
-          if (parkingSlot.availableSlots <= 0) {
-              return res.status(400).json({
-                  status: 400,
-                  data: null,
-                  error: 'Không còn chỗ trống trong bãi đỗ xe này.'
-              });
-          }
-
-          // Điều chỉnh availableSlots nếu có thay đổi
-          if (!existingRecord.parking_slotId.equals(parking_slotId)) {
-              const oldParkingSlot = await ParkingSlot.findOne({ _id: existingRecord.parking_slotId });
-              if (oldParkingSlot) {
-                  oldParkingSlot.availableSlots += 1; // Trả lại 1 chỗ
-                  await oldParkingSlot.save();
-              }
-
-              parkingSlot.availableSlots -= 1; // Giảm 1 chỗ cho parking slot mới
-              await parkingSlot.save();
-          }
-
-          existingRecord.parking_slotId = parking_slotId;
-      }
-
-      // Kiểm tra nếu monthlyFee được cung cấp
-      if (monthlyFee) {
-          if (typeof monthlyFee !== 'number' || monthlyFee <= 0) {
-              return res.status(400).json({
-                  status: 400,
-                  data: null,
-                  error: 'monthlyFee phải là một số lớn hơn 0.'
-              });
-          }
-
-          existingRecord.monthlyFee = monthlyFee;
-      }
-
-      // Kiểm tra nếu startDate và endDate được cung cấp
-      if (startDate || endDate) {
-          const parsedStartDate = startDate ? new Date(startDate) : existingRecord.startDate;
-          const parsedEndDate = endDate ? new Date(endDate) : existingRecord.endDate;
-
-          // Kiểm tra tính hợp lệ của ngày
-          if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-              return res.status(400).json({
-                  status: 400,
-                  data: null,
-                  error: 'startDate hoặc endDate không hợp lệ.'
-              });
-          }
-
-          // Kiểm tra startDate phải sớm hơn endDate
-          if (parsedStartDate >= parsedEndDate) {
-              return res.status(400).json({
-                  status: 400,
-                  data: null,
-                  error: 'startDate phải sớm hơn endDate.'
-              });
-          }
-
-          existingRecord.startDate = parsedStartDate;
-          existingRecord.endDate = parsedEndDate;
-      }
-
-      // Lưu thông tin mới
-      await existingRecord.save();
-
-      return res.status(200).json({
-          status: 200,
-          data: existingRecord,
-          error: null
+    // Kiểm tra id bắt buộc và hợp lệ
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "id không hợp lệ hoặc không được để trống.",
       });
-  } catch (error) {
-      console.error('Lỗi không xác định trong UpdateResidentHistoryMoney:', error);
-      return res.status(500).json({
-          status: 500,
+    }
+
+    // Tìm bản ghi cần cập nhật
+    const existingRecord = await ResidentHistoryMoney.findById(id);
+    if (!existingRecord) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy bản ghi với id cung cấp.",
+      });
+    }
+
+    // Cập nhật vehicleId nếu được cung cấp
+    if (vehicleId) {
+      if (!mongoose.Types.ObjectId.isValid(vehicleId)) {
+        return res.status(400).json({
+          status: 400,
           data: null,
-          error: 'Lỗi máy chủ không xác định.'
+          error: "vehicleId không hợp lệ.",
+        });
+      }
+
+      const vehicleExists = await Vehicle.findOne({
+        _id: vehicleId,
+        isDelete: false,
       });
+      if (!vehicleExists) {
+        return res.status(404).json({
+          status: 404,
+          data: null,
+          error: "Không tìm thấy vehicleId trong hệ thống.",
+        });
+      }
+
+      existingRecord.vehicleId = vehicleId;
+    }
+
+    // Cập nhật parking_slotId nếu được cung cấp
+    if (parking_slotId) {
+      if (!mongoose.Types.ObjectId.isValid(parking_slotId)) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "parking_slotId không hợp lệ.",
+        });
+      }
+
+      const newParkingSlot = await ParkingSlot.findById(parking_slotId);
+      if (!newParkingSlot) {
+        return res.status(404).json({
+          status: 404,
+          data: null,
+          error: "Không tìm thấy parking_slotId trong hệ thống.",
+        });
+      }
+
+      if (newParkingSlot.availableSlots <= 0) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "Không còn chỗ trống trong bãi đỗ xe này.",
+        });
+      }
+
+      if (!existingRecord.parking_slotId.equals(parking_slotId)) {
+        const oldParkingSlot = await ParkingSlot.findById(
+          existingRecord.parking_slotId
+        );
+
+        if (oldParkingSlot) {
+          oldParkingSlot.availableSlots += 1; // Trả lại chỗ cũ
+          await oldParkingSlot.save();
+        }
+
+        newParkingSlot.availableSlots -= 1; // Giảm chỗ mới
+        await newParkingSlot.save();
+
+        existingRecord.parking_slotId = parking_slotId;
+      }
+    }
+
+    // Cập nhật monthlyFee nếu được cung cấp
+    if (monthlyFee !== undefined) {
+      if (typeof monthlyFee !== "number" || monthlyFee <= 0) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "monthlyFee phải là số lớn hơn 0.",
+        });
+      }
+      existingRecord.monthlyFee = monthlyFee;
+    }
+
+    // Cập nhật startDate và endDate nếu được cung cấp
+    if (startDate || endDate) {
+      const parsedStartDate = startDate
+        ? new Date(startDate)
+        : existingRecord.startDate;
+      const parsedEndDate = endDate
+        ? new Date(endDate)
+        : existingRecord.endDate;
+
+      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "startDate hoặc endDate không hợp lệ.",
+        });
+      }
+
+      if (parsedStartDate >= parsedEndDate) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "startDate phải sớm hơn endDate.",
+        });
+      }
+
+      existingRecord.startDate = parsedStartDate;
+      existingRecord.endDate = parsedEndDate;
+    }
+
+    // Lưu thay đổi vào cơ sở dữ liệu
+    await existingRecord.save();
+
+    // Trả về thông tin sau khi cập nhật
+    const updatedRecord = await ResidentHistoryMoney.findById(id)
+      .populate({
+        path: "vehicleId",
+        select: "licensePlate type brand",
+        populate: {
+          path: "customerId",
+          select: "fullName phoneNumber address",
+        },
+      })
+      .populate({
+        path: "parking_slotId",
+        select: "slotCode slotType availableSlots",
+      });
+
+    return res.status(200).json({
+      status: 200,
+      data: updatedRecord,
+      error: null,
+    });
+  } catch (error) {
+    console.error(
+      "Lỗi không xác định trong UpdateResidentHistoryMoney:",
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
   }
 };
 
 const DeleteResidentHistoryMoney = async (req, res) => {
   try {
-      const { id } = req.body;
+    const { id } = req.body;
 
-      // Kiểm tra trường id bắt buộc
-      if (!id) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'id không được để trống.'
-          });
-      }
-
-      // Kiểm tra id có hợp lệ là ObjectId hay không
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-          return res.status(400).json({
-              status: 400,
-              data: null,
-              error: 'id không hợp lệ.'
-          });
-      }
-
-      // Tìm bản ghi cần xóa
-      const existingRecord = await ResidentHistoryMoney.findById(id);
-      if (!existingRecord) {
-          return res.status(404).json({
-              status: 404,
-              data: null,
-              error: 'Không tìm thấy bản ghi với id cung cấp.'
-          });
-      }
-
-      // Tìm bãi đỗ xe tương ứng để tăng lại số lượng chỗ trống
-      const parkingSlot = await ParkingSlot.findById(existingRecord.parking_slotId);
-      if (parkingSlot) {
-          parkingSlot.availableSlots += 1; // Trả lại 1 chỗ
-          await parkingSlot.save();
-      }
-
-      // Xóa bản ghi
-      await ResidentHistoryMoney.findByIdAndDelete(id);
-
-      return res.status(200).json({
-          status: 200,
-          data: null,
-          error: null,
-          message: 'Bản ghi đã được xóa thành công.'
+    // Kiểm tra trường id bắt buộc
+    if (!id) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "id không được để trống.",
       });
+    }
+
+    // Kiểm tra id có hợp lệ là ObjectId hay không
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "id không hợp lệ.",
+      });
+    }
+
+    // Tìm bản ghi cần xóa
+    const existingRecord = await ResidentHistoryMoney.findById(id);
+    if (!existingRecord) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy bản ghi với id cung cấp.",
+      });
+    }
+
+    // Tìm bãi đỗ xe tương ứng để tăng lại số lượng chỗ trống
+    const parkingSlot = await ParkingSlot.findById(
+      existingRecord.parking_slotId
+    );
+    if (parkingSlot) {
+      parkingSlot.availableSlots += 1; // Trả lại 1 chỗ
+      await parkingSlot.save();
+    }
+
+    // Xóa bản ghi
+    await ResidentHistoryMoney.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      status: 200,
+      data: null,
+      error: null,
+      message: "Bản ghi đã được xóa thành công.",
+    });
   } catch (error) {
-      console.error('Lỗi không xác định trong DeleteResidentHistoryMoney:', error);
-      return res.status(500).json({
-          status: 500,
-          data: null,
-          error: 'Lỗi máy chủ không xác định.'
-      });
+    console.error(
+      "Lỗi không xác định trong DeleteResidentHistoryMoney:",
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
   }
 };
 
@@ -489,42 +551,45 @@ const GetResidentHistoryMoneyById = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'id không hợp lệ.'
+        error: "id không hợp lệ.",
       });
     }
 
     // Tìm bản ghi ResidentHistoryMoney theo id
     const residentHistoryMoney = await ResidentHistoryMoney.findById(id)
       .populate({
-        path: 'vehicleId',
-        model: 'Vehicle',
-        select: 'licensePlate type brand'
+        path: "vehicleId",
+        model: "Vehicle",
+        select: "licensePlate type brand",
       })
       .populate({
-        path: 'parking_slotId',
-        model: 'ParkingSlot',
-        select: 'slotCode slotType'
+        path: "parking_slotId",
+        model: "ParkingSlot",
+        select: "slotCode slotType",
       });
 
     if (!residentHistoryMoney) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy bản ghi ResidentHistoryMoney với id này.'
+        error: "Không tìm thấy bản ghi ResidentHistoryMoney với id này.",
       });
     }
 
     return res.status(200).json({
       status: 200,
       data: residentHistoryMoney,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi không xác định trong GetResidentHistoryMoneyById:', error);
+    console.error(
+      "Lỗi không xác định trong GetResidentHistoryMoneyById:",
+      error
+    );
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -537,7 +602,7 @@ const GetMonthlyStatistics = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Cần cung cấp month và year.'
+        error: "Cần cung cấp month và year.",
       });
     }
 
@@ -548,28 +613,28 @@ const GetMonthlyStatistics = async (req, res) => {
       {
         $match: {
           startDate: { $gte: startDate, $lte: endDate },
-          isDelete: false
-        }
+          isDelete: false,
+        },
       },
       {
         $group: {
           _id: null,
-          totalIncome: { $sum: '$monthlyFee' }
-        }
-      }
+          totalIncome: { $sum: "$monthlyFee" },
+        },
+      },
     ]);
 
     return res.status(200).json({
       status: 200,
       data: totalMonthlyIncome[0] ? totalMonthlyIncome[0].totalIncome : 0,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi không xác định trong GetMonthlyStatistics:', error);
+    console.error("Lỗi không xác định trong GetMonthlyStatistics:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -582,7 +647,7 @@ const GetYearlyStatistics = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Cần cung cấp year.'
+        error: "Cần cung cấp year.",
       });
     }
 
@@ -593,34 +658,43 @@ const GetYearlyStatistics = async (req, res) => {
       {
         $match: {
           startDate: { $gte: startDate, $lte: endDate },
-          isDelete: false
-        }
+          isDelete: false,
+        },
       },
       {
         $group: {
           _id: null,
-          totalIncome: { $sum: '$monthlyFee' }
-        }
-      }
+          totalIncome: { $sum: "$monthlyFee" },
+        },
+      },
     ]);
 
     return res.status(200).json({
       status: 200,
       data: totalYearlyIncome[0] ? totalYearlyIncome[0].totalIncome : 0,
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi không xác định trong GetYearlyStatistics:', error);
+    console.error("Lỗi không xác định trong GetYearlyStatistics:", error);
     return res.status(500).json({
       status: 500,
-      data: null,error: 'Lỗi máy chủ không xác định.'
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const FilterResidentHistoryMoneys = async (req, res) => {
   try {
-    const { isExpired, type, slotCode, month, year, pageNumber = 1, pageSize = 10 } = req.body;
+    const {
+      isExpired,
+      type,
+      slotCode,
+      month,
+      year,
+      pageNumber = 1,
+      pageSize = 10,
+    } = req.body;
 
     // Kiểm tra pageNumber và pageSize
     const parsedPageNumber = parseInt(pageNumber, 10);
@@ -630,7 +704,7 @@ const FilterResidentHistoryMoneys = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -638,7 +712,7 @@ const FilterResidentHistoryMoneys = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -653,78 +727,93 @@ const FilterResidentHistoryMoneys = async (req, res) => {
       { $match: matchCondition },
       {
         $lookup: {
-          from: 'vehicles', // Tên collection của xe
-          localField: 'vehicleId',
-          foreignField: '_id',
-          as: 'vehicle'
-        }
+          from: "vehicles", // Tên collection của xe
+          localField: "vehicleId",
+          foreignField: "_id",
+          as: "vehicle",
+        },
       },
-      { $unwind: '$vehicle' },
+      { $unwind: "$vehicle" },
       {
         $lookup: {
-          from: 'parking_slots', // Tên collection của slot đỗ xe
-          localField: 'parking_slotId',
-          foreignField: '_id',
-          as: 'parkingSlot'
-        }
+          from: "rfid_cards", // Tên collection của RFIDCard
+          localField: "rFIDCardID",
+          foreignField: "_id",
+          as: "rFIDCardInfo", // Thêm thông tin RFIDCard vào kết quả
+        },
       },
-      { $unwind: '$parkingSlot' },
+      {
+        $unwind: {
+          path: "$rFIDCardInfo",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // Nếu không có RFIDCard, giữ giá trị null
       {
         $lookup: {
-          from: 'customers', // Lấy thông tin từ collection customers
-          localField: 'vehicle.customerId', // Liên kết thông qua customerId trong vehicle
-          foreignField: '_id',
-          as: 'customer'
-        }
+          from: "parking_slots", // Tên collection của slot đỗ xe
+          localField: "parking_slotId",
+          foreignField: "_id",
+          as: "parkingSlot",
+        },
       },
-      { $unwind: '$customer' }, // Đảm bảo chỉ lấy một đối tượng customer
+      { $unwind: "$parkingSlot" },
       {
         $lookup: {
-          from: 'apartments', // Lấy thông tin từ collection apartments
-          localField: 'customer.apartmentsId', // Liên kết thông qua apartmentsId trong customer
-          foreignField: '_id',
-          as: 'apartment'
-        }
+          from: "customers", // Lấy thông tin từ collection customers
+          localField: "vehicle.customerId", // Liên kết thông qua customerId trong vehicle
+          foreignField: "_id",
+          as: "customer",
+        },
       },
-      { $unwind: { path: '$apartment', preserveNullAndEmptyArrays: true } }, // Nếu không có apartment, giữ giá trị null
+      { $unwind: "$customer" }, // Đảm bảo chỉ lấy một đối tượng customer
+      {
+        $lookup: {
+          from: "apartments", // Lấy thông tin từ collection apartments
+          localField: "customer.apartmentsId", // Liên kết thông qua apartmentsId trong customer
+          foreignField: "_id",
+          as: "apartment",
+        },
+      },
+      { $unwind: { path: "$apartment", preserveNullAndEmptyArrays: true } }, // Nếu không có apartment, giữ giá trị null
       // Gộp thông tin apartment vào customer
       {
         $addFields: {
-          'customer.apartment': '$apartment' // Thêm thông tin apartment vào đối tượng customer
-        }
+          "customer.apartment": "$apartment", // Thêm thông tin apartment vào đối tượng customer
+        },
       },
       // Bỏ trường apartment không cần thiết sau khi đã lồng vào customer
       { $project: { apartment: 0 } },
       // Gộp thông tin customer vào vehicle
       {
         $addFields: {
-          'vehicle.customer': '$customer' // Thêm thông tin customer vào đối tượng vehicle
-        }
+          "vehicle.customer": "$customer", // Thêm thông tin customer vào đối tượng vehicle
+        },
       },
       // Bỏ trường customer không cần thiết sau khi đã lồng vào vehicle
-      { $project: { customer: 0 } }
+      { $project: { customer: 0 } },
     ];
 
     // Lọc theo loại xe (type) nếu có
     if (type) {
       pipeline.push({
-        $match: { 'vehicle.type': type }
+        $match: { "vehicle.type": type },
       });
     }
 
     // Lọc theo khu đỗ xe (slotCode) nếu có
     if (slotCode) {
       pipeline.push({
-        $match: { 'parkingSlot.slotCode': slotCode }
+        $match: { "parkingSlot.slotCode": slotCode },
       });
     }
 
     // Lọc theo tình trạng hết hạn (isExpired)
-    if (typeof isExpired === 'boolean') {
+    if (typeof isExpired === "boolean") {
       pipeline.push({
         $match: isExpired
           ? { endDate: { $lt: currentDate } } // Hết hạn
-          : { endDate: { $gte: currentDate } } // Còn hạn
+          : { endDate: { $gte: currentDate } }, // Còn hạn
       });
     }
 
@@ -733,13 +822,13 @@ const FilterResidentHistoryMoneys = async (req, res) => {
       const startDate = new Date(year, month - 1, 1); // Ngày đầu tháng
       const endDate = new Date(year, month, 0); // Ngày cuối tháng
       pipeline.push({
-        $match: { startDate: { $gte: startDate, $lte: endDate } }
+        $match: { startDate: { $gte: startDate, $lte: endDate } },
       });
     } else if (year) {
       const startDate = new Date(year, 0, 1); // Ngày đầu năm
       const endDate = new Date(year, 11, 31); // Ngày cuối năm
       pipeline.push({
-        $match: { startDate: { $gte: startDate, $lte: endDate } }
+        $match: { startDate: { $gte: startDate, $lte: endDate } },
       });
     }
 
@@ -750,8 +839,8 @@ const FilterResidentHistoryMoneys = async (req, res) => {
     pipeline.push({
       $group: {
         _id: "$vehicleId",
-        doc: { $first: "$$ROOT" } // Take the first document in each group after sorting
-      }
+        doc: { $first: "$$ROOT" }, // Take the first document in each group after sorting
+      },
     });
 
     // Unwind to retrieve documents
@@ -759,15 +848,15 @@ const FilterResidentHistoryMoneys = async (req, res) => {
 
     pipeline.push({
       $addFields: {
-        isExpired: { $lt: ['$endDate', currentDate] }
-      }
+        isExpired: { $lt: ["$endDate", currentDate] },
+      },
     });
 
     pipeline.push({
       $facet: {
         paginatedResults: [{ $skip: skip }, { $limit: parsedPageSize }],
-        totalCount: [{ $count: 'total' }]
-      }
+        totalCount: [{ $count: "total" }],
+      },
     });
 
     const results = await ResidentHistoryMoney.aggregate(pipeline);
@@ -779,7 +868,7 @@ const FilterResidentHistoryMoneys = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không có bản ghi nào được tìm thấy.'
+        error: "Không có bản ghi nào được tìm thấy.",
       });
     }
 
@@ -792,27 +881,30 @@ const FilterResidentHistoryMoneys = async (req, res) => {
         currentPage: parsedPageNumber,
         pageSize: parsedPageSize,
         totalRecords,
-        totalPages
+        totalPages,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi không xác định trong FilterResidentHistoryMoneys:', error);
+    console.error(
+      "Lỗi không xác định trong FilterResidentHistoryMoneys:",
+      error
+    );
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 module.exports = {
-    GetAllResidentHistoryMoneys,
-    CreateResidentHistoryMoney,
-    UpdateResidentHistoryMoney,
-    DeleteResidentHistoryMoney,
-    GetResidentHistoryMoneyById,
-    GetMonthlyStatistics,
-    GetYearlyStatistics,
-    FilterResidentHistoryMoneys
+  GetAllResidentHistoryMoneys,
+  CreateResidentHistoryMoney,
+  UpdateResidentHistoryMoney,
+  DeleteResidentHistoryMoney,
+  GetResidentHistoryMoneyById,
+  GetMonthlyStatistics,
+  GetYearlyStatistics,
+  FilterResidentHistoryMoneys,
 };

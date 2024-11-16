@@ -2,9 +2,9 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const multer = require("multer");
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const s3Client = new S3Client({ region: 'your-region' });
-const mongoose = require('mongoose');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const s3Client = new S3Client({ region: "your-region" });
+const mongoose = require("mongoose");
 
 // Hàm đăng nhập
 const login = async (req, res) => {
@@ -20,14 +20,18 @@ const login = async (req, res) => {
       status: status,
       data: data,
       error: error,
-      path: req.originalUrl
+      path: req.originalUrl,
     });
   };
 
   try {
     // Kiểm tra định dạng username
     if (!usernameRegex.test(username)) {
-      return sendResponse("400", "", "Tên đăng nhập không được chứa dấu và chỉ bao gồm chữ cái và số");
+      return sendResponse(
+        "400",
+        "",
+        "Tên đăng nhập không được chứa dấu và chỉ bao gồm chữ cái và số"
+      );
     }
 
     // Kiểm tra định dạng password
@@ -52,7 +56,7 @@ const login = async (req, res) => {
       {
         id: user._id,
         username: user.username,
-        role: user.role
+        role: user.role,
       },
       process.env.JWT_ACCESS_KEY, // Mã bí mật JWT từ biến môi trường
       { expiresIn: "6h" } // Hạn sử dụng của JWT là 1 giờ
@@ -67,14 +71,15 @@ const login = async (req, res) => {
   }
 };
 
-
 const signup = async (req, res) => {
-  const { username, password, age, address, fullname, phoneNumber } = req.body;
+  const { username, password, age, address, fullname, phoneNumber, email } =
+    req.body;
 
-  // Regex để kiểm tra username không dấu và password không có khoảng trắng
-  const usernameRegex = /^[a-zA-Z0-9]+$/;
-  const passwordRegex = /^\S+$/; // Không chứa khoảng trắng
-  const phoneNumberRegex = /^\d{10,11}$/; // Chỉ chứa 10-11 số
+  // Regex để kiểm tra các định dạng
+  const usernameRegex = /^[a-zA-Z0-9]+$/; // Username không dấu và không ký tự đặc biệt
+  const passwordRegex = /^\S+$/; // Password không chứa khoảng trắng
+  const phoneNumberRegex = /^\d{10,11}$/; // Số điện thoại có 10 hoặc 11 số
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Kiểm tra định dạng email cơ bản
 
   // Hàm chung để trả về phản hồi
   const sendResponse = (status, data, error) => {
@@ -82,14 +87,18 @@ const signup = async (req, res) => {
       status: status,
       data: data,
       error: error,
-      path: req.originalUrl
+      path: req.originalUrl,
     });
   };
 
   try {
     // Kiểm tra định dạng username
     if (!usernameRegex.test(username)) {
-      return sendResponse("400", "", "Tên đăng nhập không được chứa dấu và chỉ bao gồm chữ cái và số");
+      return sendResponse(
+        "400",
+        "",
+        "Tên đăng nhập không được chứa dấu và chỉ bao gồm chữ cái và số"
+      );
     }
 
     // Kiểm tra định dạng password
@@ -102,10 +111,21 @@ const signup = async (req, res) => {
       return sendResponse("400", "", "Số điện thoại phải có 10 hoặc 11 chữ số");
     }
 
+    // Kiểm tra định dạng email
+    if (!emailRegex.test(email)) {
+      return sendResponse("400", "", "Email không hợp lệ");
+    }
+
     // Kiểm tra xem username đã tồn tại hay chưa
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return sendResponse("400", "", "Tên đăng nhập đã tồn tại");
+    }
+
+    // Kiểm tra xem email đã được sử dụng chưa
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return sendResponse("400", "", "Email đã được sử dụng");
     }
 
     // Mã hóa mật khẩu
@@ -120,6 +140,7 @@ const signup = async (req, res) => {
       fullname: fullname,
       address: address,
       phoneNumber: phoneNumber,
+      email: email,
     });
 
     // Lưu người dùng mới vào cơ sở dữ liệu
@@ -146,7 +167,7 @@ const GetAllUsers = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageNumber không hợp lệ, phải là một số nguyên dương.'
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -154,7 +175,7 @@ const GetAllUsers = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'pageSize không hợp lệ, phải là một số nguyên dương.'
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
       });
     }
 
@@ -167,13 +188,13 @@ const GetAllUsers = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không có người dùng nào được tìm thấy.'
+        error: "Không có người dùng nào được tìm thấy.",
       });
     }
 
     // Lấy danh sách người dùng với phân trang
     const users = await User.find({})
-      .select('-password') // Bỏ trường password khi trả về
+      .select("-password") // Bỏ trường password khi trả về
       .skip(skip)
       .limit(parsedPageSize);
 
@@ -181,7 +202,7 @@ const GetAllUsers = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy người dùng cho trang này.'
+        error: "Không tìm thấy người dùng cho trang này.",
       });
     }
 
@@ -190,35 +211,44 @@ const GetAllUsers = async (req, res) => {
     return res.status(200).json({
       status: 200,
       data: {
-        users,            // Danh sách người dùng
-        currentPage: parsedPageNumber,  // Trang hiện tại
-        pageSize: parsedPageSize,       // Số lượng bản ghi mỗi trang
-        totalUsers,       // Tổng số người dùng
-        totalPages        // Tổng số trang
+        users, // Danh sách người dùng
+        currentPage: parsedPageNumber, // Trang hiện tại
+        pageSize: parsedPageSize, // Số lượng bản ghi mỗi trang
+        totalUsers, // Tổng số người dùng
+        totalPages, // Tổng số trang
       },
-      error: null
+      error: null,
     });
-
   } catch (error) {
     console.error(`Lỗi trong GetAllUsers:`, error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
 
 const UpdateUser = async (req, res) => {
   try {
-    const { id, username, fullname, age, address, phoneNumber, role, password } = req.body;
+    const {
+      id,
+      username,
+      fullname,
+      age,
+      address,
+      phoneNumber,
+      role,
+      password,
+      email, // Thêm email
+    } = req.body;
 
     // Kiểm tra tính hợp lệ của id
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'id không hợp lệ.'
+        error: "ID không hợp lệ.",
       });
     }
 
@@ -229,7 +259,7 @@ const UpdateUser = async (req, res) => {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: 'Không tìm thấy người dùng với id này.'
+        error: "Không tìm thấy người dùng với ID này.",
       });
     }
 
@@ -237,13 +267,14 @@ const UpdateUser = async (req, res) => {
     const usernameRegex = /^[a-zA-Z0-9]+$/;
     const passwordRegex = /^\S+$/; // Không chứa khoảng trắng
     const phoneNumberRegex = /^\d{10,11}$/; // Chỉ chứa 10-11 số
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Kiểm tra định dạng email
 
     // Kiểm tra định dạng username nếu có
     if (username && !usernameRegex.test(username)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Tên đăng nhập không được chứa dấu và chỉ bao gồm chữ cái và số'
+        error: "Tên đăng nhập không được chứa dấu và chỉ bao gồm chữ cái và số",
       });
     }
 
@@ -252,7 +283,7 @@ const UpdateUser = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Mật khẩu không được chứa khoảng trắng'
+        error: "Mật khẩu không được chứa khoảng trắng",
       });
     }
 
@@ -261,29 +292,51 @@ const UpdateUser = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: 'Số điện thoại phải có 10 hoặc 11 chữ số'
+        error: "Số điện thoại phải có 10 hoặc 11 chữ số",
       });
+    }
+
+    // Kiểm tra định dạng email nếu có
+    if (email && !emailRegex.test(email)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Email không hợp lệ",
+      });
+    }
+
+    // Kiểm tra xem email có bị trùng lặp với người dùng khác không
+    if (email) {
+      const existingEmailUser = await User.findOne({ email });
+      if (existingEmailUser && existingEmailUser.id !== id) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "Email đã được sử dụng bởi người dùng khác",
+        });
+      }
     }
 
     // Nếu role có trong request, kiểm tra xem nó có hợp lệ hay không
     if (role) {
-      const validRoles = ['Admin', 'User'];
+      const validRoles = ["Admin", "User"];
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'Giá trị role phải là "Admin" hoặc "User".'
+          error: 'Giá trị role phải là "Admin" hoặc "User".',
         });
       }
     }
 
     // Cập nhật các trường cần thiết
     user.username = username || user.username;
-    user.fullname = fullname || user.fullname; // Cập nhật fullname
+    user.fullname = fullname || user.fullname;
     user.age = age || user.age;
     user.address = address || user.address;
     user.phoneNumber = phoneNumber || user.phoneNumber;
     user.role = role || user.role;
+    user.email = email || user.email;
 
     // Nếu có mật khẩu mới trong request, mã hóa mật khẩu trước khi lưu
     if (password) {
@@ -301,14 +354,14 @@ const UpdateUser = async (req, res) => {
     return res.status(200).json({
       status: 200,
       data: userWithoutPassword, // Trả về thông tin người dùng mà không có password
-      error: null
+      error: null,
     });
   } catch (error) {
-    console.error('Lỗi trong UpdateUser:', error);
+    console.error("Lỗi trong UpdateUser:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: 'Lỗi máy chủ không xác định.'
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -317,5 +370,5 @@ module.exports = {
   login,
   signup,
   GetAllUsers,
-  UpdateUser
+  UpdateUser,
 };

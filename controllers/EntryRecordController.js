@@ -1,9 +1,9 @@
 const EntryRecord = require("../models/EntryRecord");
-const UserShift = require("../models/UserShift");
 const User = require("../models/User");
-const Shift = require("../models/Shift");
 const Vehicle = require("../models/Vehicle");
 const RFIDCard = require("../models/RFIDCard");
+const Customer = require("../models/Customer");
+
 const ResidentHistoryMoney = require("../models/ResidentHistoryMoney");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
@@ -49,19 +49,9 @@ const GetAllEntryRecords = async (req, res) => {
 
     const records = await EntryRecord.find({ isDelete: false })
       .populate({
-        path: "users_shiftId", // Liên kết với bảng UserShift
-        populate: [
-          {
-            path: "userId", // Liên kết với bảng User thông qua userId
-            model: "User", // Lấy dữ liệu từ bảng User
-            select: "username", // Chỉ lấy trường username từ bảng User
-          },
-          {
-            path: "shiftId", // Liên kết với bảng Shift thông qua shiftId
-            model: "Shift", // Lấy dữ liệu từ bảng Shift
-            select: "shiftName startTime endTime", // Chỉ lấy các trường cần thiết từ bảng Shift
-          },
-        ],
+        path: "usersID",
+        model: "User",
+        select: "fullname age address phoneNumber", // Liên kết với bảng User
       })
       .populate({
         path: "rfidId", // Liên kết với bảng RFIDCard thông qua rfidId
@@ -131,19 +121,9 @@ const GetEntryRecordById = async (req, res) => {
 
     const entryRecord = await EntryRecord.findById(id)
       .populate({
-        path: "users_shiftId",
-        populate: [
-          {
-            path: "userId",
-            model: "User",
-            select: "username",
-          },
-          {
-            path: "shiftId",
-            model: "Shift",
-            select: "shiftName startTime endTime",
-          },
-        ],
+        path: "usersID",
+        model: "User",
+        select: "fullname age address phoneNumber", // Liên kết với bảng User
       })
       .populate({
         path: "rfidId",
@@ -227,19 +207,9 @@ const GetEntryRecordByLicensePlate = async (req, res) => {
 
     const entryRecords = await EntryRecord.find({ licensePlate })
       .populate({
-        path: "users_shiftId",
-        populate: [
-          {
-            path: "userId",
-            model: "User",
-            select: "username",
-          },
-          {
-            path: "shiftId",
-            model: "Shift",
-            select: "shiftName startTime endTime",
-          },
-        ],
+        path: "usersID",
+        model: "User",
+        select: "fullname age address phoneNumber", // Liên kết với bảng User
       })
       .populate({
         path: "rfidId",
@@ -364,15 +334,9 @@ const GetEntryRecordsByDateRange = async (req, res) => {
       isDelete: false,
     })
       .populate({
-        path: "users_shiftId",
-        populate: [
-          { path: "userId", model: "User", select: "username" },
-          {
-            path: "shiftId",
-            model: "Shift",
-            select: "shiftName startTime endTime",
-          },
-        ],
+        path: "usersID",
+        model: "User",
+        select: "fullname age address phoneNumber", // Liên kết với bảng User
       })
       .populate({
         path: "rfidId",
@@ -465,15 +429,9 @@ const GetEntryRecordsByVehicleType = async (req, res) => {
 
     const records = await EntryRecord.find({ vehicleType })
       .populate({
-        path: "users_shiftId",
-        populate: [
-          { path: "userId", model: "User", select: "username" },
-          {
-            path: "shiftId",
-            model: "Shift",
-            select: "shiftName startTime endTime",
-          },
-        ],
+        path: "usersID",
+        model: "User",
+        select: "fullname age address phoneNumber", // Liên kết với bảng User
       })
       .populate({
         path: "rfidId",
@@ -651,7 +609,7 @@ const CreateEntryRecord = async (req, res) => {
       picture_back,
       licensePlate,
       vehicleType,
-      users_shiftId,
+      usersID,
       rfidId,
     } = req.body;
 
@@ -668,7 +626,7 @@ const CreateEntryRecord = async (req, res) => {
     }
 
     // Kiểm tra tính hợp lệ của vehicleType
-    const validVehicleTypes = ["car", "motor"];
+    const validVehicleTypes = ["car", "motor", "bike", "eBike"];
     if (!validVehicleTypes.includes(vehicleType)) {
       return res.status(400).json({
         status: 400,
@@ -678,21 +636,23 @@ const CreateEntryRecord = async (req, res) => {
     }
 
     // Kiểm tra users_shiftId hợp lệ và tồn tại
-    if (!mongoose.Types.ObjectId.isValid(users_shiftId)) {
+    if (!mongoose.Types.ObjectId.isValid(usersID)) {
       return res.status(400).json({
         status: 400,
         data: null,
         error: "users_shiftId không hợp lệ.",
       });
     }
-    const userShift = await UserShift.findById(users_shiftId)
-      .populate("userId")
-      .populate("shiftId");
-    if (!userShift) {
+    const user = await User.findById(usersID).select(
+      "fullname age address phoneNumber"
+    );
+    // console.log("user", user);
+
+    if (!user) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "users_shiftId không tồn tại trong cơ sở dữ liệu.",
+        error: "user không tồn tại trong cơ sở dữ liệu.",
       });
     }
 
@@ -768,7 +728,7 @@ const CreateEntryRecord = async (req, res) => {
       licensePlate,
       isResident,
       vehicleType,
-      users_shiftId,
+      usersID: user,
       rfidId,
       isOut: false,
     });
@@ -787,12 +747,9 @@ const CreateEntryRecord = async (req, res) => {
         isResident: newEntryRecord.isResident,
         vehicleType: newEntryRecord.vehicleType,
         isOut: newEntryRecord.isOut,
-        users_shift: {
-          fullName: userShift?.userId?.fullname || "",
-          phoneNumber: userShift?.userId?.phoneNumber || "",
-          shiftName: userShift?.shiftId?.shiftName || "",
-          startTime: userShift?.shiftId?.startTime || "",
-          endTime: userShift?.shiftId?.endTime || "",
+        user: {
+          fullName: user.fullname || "",
+          phoneNumber: user.phoneNumber || "",
         },
         rfid: {
           uuid: rfidCard?.uuid || [],
@@ -822,7 +779,6 @@ const FilterEntryRecords = async (req, res) => {
     const {
       fromDay,
       toDay,
-      useridofshift,
       isResident,
       isOut,
       pageNumber = 1,
@@ -879,21 +835,6 @@ const FilterEntryRecords = async (req, res) => {
       };
     }
 
-    // Lọc theo ca trực của useridofshift
-    if (useridofshift) {
-      const userShift = await UserShift.findOne({
-        userId: useridofshift,
-      }).select("_id");
-      if (!userShift) {
-        return res.status(404).json({
-          status: 404,
-          data: null,
-          error: "Không tìm thấy ca trực cho người dùng này.",
-        });
-      }
-      matchCondition.users_shiftId = userShift._id;
-    }
-
     // Lọc theo tình trạng cư dân (isResident)
     if (typeof isResident === "boolean") {
       matchCondition.isResident = isResident;
@@ -928,40 +869,13 @@ const FilterEntryRecords = async (req, res) => {
       { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
-          from: "users_shift",
-          localField: "users_shiftId",
-          foreignField: "_id",
-          as: "userShift",
-        },
-      },
-      { $unwind: { path: "$userShift", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
           from: "users",
-          localField: "userShift.userId",
+          localField: "usersID",
           foreignField: "_id",
           as: "user",
         },
       },
       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "shift",
-          localField: "userShift.shiftId",
-          foreignField: "_id",
-          as: "shift",
-        },
-      },
-      { $unwind: { path: "$shift", preserveNullAndEmptyArrays: true } },
-      {
-        $addFields: {
-          "userShift.fullName": "$user.fullname",
-          "userShift.phoneNumber": "$user.phoneNumber",
-          "userShift.shiftName": "$shift.shiftName",
-          "userShift.startTime": "$shift.startTime",
-          "userShift.endTime": "$shift.endTime",
-        },
-      },
       {
         $lookup: {
           from: "rfid_cards",
@@ -970,6 +884,7 @@ const FilterEntryRecords = async (req, res) => {
           as: "rfidCard",
         },
       },
+      { $unwind: { path: "$rfidCard", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: "exit_records",
@@ -1049,12 +964,9 @@ const FilterEntryRecords = async (req, res) => {
             isResident: "$isResident",
             vehicleType: "$vehicleType",
             isOut: "$isOut",
-            users_shift: {
-              fullName: "$userShift.fullName",
-              phoneNumber: "$userShift.phoneNumber",
-              shiftName: "$userShift.shiftName",
-              startTime: "$userShift.startTime",
-              endTime: "$userShift.endTime",
+            user: {
+              fullName: "$user.fullname",
+              phoneNumber: "$user.phoneNumber",
             },
             rfid: {
               uuid: "$rfidCard.uuid",
@@ -1143,19 +1055,9 @@ const GetEntryRecordByisOutAndUuidAndLicensePlate = async (req, res) => {
       licensePlate,
     })
       .populate({
-        path: "users_shiftId",
-        populate: [
-          {
-            path: "userId",
-            model: "User",
-            select: "username",
-          },
-          {
-            path: "shiftId",
-            model: "Shift",
-            select: "shiftName startTime endTime",
-          },
-        ],
+        path: "usersID",
+        model: "User",
+        select: "fullname age address phoneNumber", // Liên kết với bảng User
       })
       .populate({
         path: "rfidId",

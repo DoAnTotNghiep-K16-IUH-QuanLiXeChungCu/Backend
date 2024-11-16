@@ -30,6 +30,11 @@ const ReadRFIDRoute = require("./routes/readRFIDRoute");
 const SettingRoute = require("./routes/SettingRoute");
 const LaneRoute = require("./routes/LaneRoute");
 const CameraRoute = require("./routes/CameraRoute");
+const ParkingTransactionRoute = require("./routes/ParkingTransactionRoute");
+const TimeKeepingLogRoute = require("./routes/TimeKeepingLogRoute");
+const TimeKeepingRoute = require("./routes/TimeKeepingRoute");
+const PayRollRoute = require("./routes/PayRollRoute");
+const PayRollFomulaRoute = require("./routes/PayRollFomulaRoute");
 
 const corsOptions = {
   origin: "http://localhost:3000", // Nguồn được phép
@@ -69,6 +74,11 @@ app.use("/api/v1/readRFID", ReadRFIDRoute);
 app.use("/api/v1/setting", SettingRoute);
 app.use("/api/v1/lane", LaneRoute);
 app.use("/api/v1/camera", CameraRoute);
+app.use("/api/v1/parkingTransaction", ParkingTransactionRoute);
+app.use("/api/v1/timeKeepingLog", TimeKeepingLogRoute);
+app.use("/api/v1/timeKeeping", TimeKeepingRoute);
+app.use("/api/v1/payRoll", PayRollRoute);
+app.use("/api/v1/payRollFomula", PayRollFomulaRoute);
 
 app.use(function (req, res) {
   res.status(404).send("Not found");
