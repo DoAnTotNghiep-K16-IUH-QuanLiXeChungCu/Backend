@@ -26,15 +26,16 @@ const openSerialPortEntry = (portPath, baudRate) => {
         console.error(`Lỗi mở cổng Entry ${portPath}: ${err.message}`);
         if (portExit && lastPortExit === portPath) {
           portExit.close();
-        }
-        if (anotherPortEntry && lastAnotherPortEntry === portPath) {
+        } else if (anotherPortEntry && lastAnotherPortEntry === portPath) {
           anotherPortEntry.close();
-        }
-        if (anotherPortExit && lastAnotherPortExit === portPath) {
+        } else if (anotherPortExit && lastAnotherPortExit === portPath) {
           anotherPortExit.close();
+        } else {
+          console.error(
+            `Đã đóng các cổng khác để mở cổng ${portPath} cho Entry`
+          );
+          openSerialPortEntry(portPath, baudRate);
         }
-        openSerialPortEntry(portPath, baudRate);
-        console.error(`Đã đóng các cổng khác để mở cổng ${portPath} cho Entry`);
       } else {
         console.error(`Lỗi khác khi mở cổng Entry ${portPath}: ${err.message}`);
       }
@@ -59,7 +60,7 @@ const openSerialPortExit = (portPath, baudRate) => {
     "error",
     (err) => {
       if (err.message.includes("Access denied")) {
-        console.error(`Lỗi mở cổng Entry ${portPath}: ${err.message}`);
+        console.error(`Lỗi mở cổng Exit ${portPath}: ${err.message}`);
         if (portEntry && lastPortEntry === portPath) {
           portEntry.close();
         }
@@ -95,7 +96,7 @@ const openAnotherSerialPortEntry = (portPath, baudRate) => {
     "error",
     (err) => {
       if (err.message.includes("Access denied")) {
-        console.error(`Lỗi mở cổng Entry ${portPath}: ${err.message}`);
+        console.error(`Lỗi mở cổng Entry thứ 2 ${portPath}: ${err.message}`);
         if (portEntry && lastPortEntry === portPath) {
           portEntry.close();
         }
@@ -133,7 +134,7 @@ const openAnotherSerialPortExit = (portPath, baudRate) => {
     "error",
     (err) => {
       if (err.message.includes("Access denied")) {
-        console.error(`Lỗi mở cổng Entry ${portPath}: ${err.message}`);
+        console.error(`Lỗi mở cổng Exit thứ 2 ${portPath}: ${err.message}`);
         if (portEntry && lastPortEntry === portPath) {
           portEntry.close();
         }
@@ -203,7 +204,7 @@ const initAnotherSerialPortEntry = (portPath, baudRate) => {
       if (err) {
         console.error(`Lỗi khi đóng cổng Entry: ${err.message}`);
       } else {
-        console.log("Cổng Entry đã được đóng trước khi khởi tạo lại.");
+        console.log("Cổng Entry thứ 2 đã được đóng trước khi khởi tạo lại.");
         openAnotherSerialPortEntry(portPath, baudRate); // Mở lại cổng Entry sau khi đóng
       }
     });
@@ -237,8 +238,14 @@ const setupSerialPortEntry = (req, res) => {
         `Cổng serial ${comPort} cho Entry không được cung cấp hoặc đã bị sử dụng`
       );
   }
-  initSerialPortEntry(comPort, baudRate);
-  res.status(200).send(`Cổng serial Entry ${comPort} đã được khởi tạo.`);
+  if (lastPortEntry === comPort) {
+    res.status(200).send(`Cổng serial Entry ${comPort} đã được tạo trước đó.`);
+    // console.log(`Cổng serial Entry ${comPort} đã được tạo trước đó.`);
+    return;
+  } else {
+    initSerialPortEntry(comPort, baudRate);
+    res.status(200).send(`Cổng serial Entry ${comPort} đã được khởi tạo.`);
+  }
 };
 
 // Endpoint để khởi tạo cổng serial cho Exit
@@ -251,8 +258,14 @@ const setupSerialPortExit = (req, res) => {
         `Cổng serial ${comPort} cho Exit không được cung cấp hoặc đã bị sử dụng`
       );
   }
-  initSerialPortExit(comPort, baudRate);
-  res.status(200).send(`Cổng serial Exit ${comPort} đã được khởi tạo.`);
+  if (lastPortExit === comPort) {
+    res.status(200).send(`Cổng serial Exit ${comPort} đã được tạo trước đó.`);
+    // console.log(`Cổng serial Exit ${comPort} đã được tạo trước đó.`);
+    return;
+  } else {
+    initSerialPortExit(comPort, baudRate);
+    res.status(200).send(`Cổng serial Exit ${comPort} đã được khởi tạo.`);
+  }
 };
 
 // Endpoint để khởi tạo cổng serial cho Entry
@@ -265,8 +278,23 @@ const setupAnotherSerialPortEntry = (req, res) => {
         `Cổng serial ${comPort} cho Entry không được cung cấp hoặc đã bị sử dụng`
       );
   }
-  initAnotherSerialPortEntry(comPort, baudRate);
-  res.status(200).send(`Cổng serial Entry ${comPort} đã được khởi tạo.`);
+  if (lastAnotherPortEntry === comPort) {
+    res
+      .status(200)
+      .send(
+        `Cổng serial Entry thứ 2 với port ${comPort} đã được tạo trước đó.`
+      );
+    // console.log(
+    //   `Cổng serial Entry thứ 2 với port ${comPort} đã được tạo trước đó.`
+    // );
+
+    return;
+  } else {
+    initAnotherSerialPortEntry(comPort, baudRate);
+    res
+      .status(200)
+      .send(`Cổng serial Entry thứ 2 với port ${comPort} đã được khởi tạo.`);
+  }
 };
 
 // Endpoint để khởi tạo cổng serial cho Exit
@@ -279,8 +307,20 @@ const setupAnotherSerialPortExit = (req, res) => {
         `Cổng serial ${comPort} cho Exit không được cung cấp hoặc đã bị sử dụng`
       );
   }
-  initAnotherSerialPortExit(comPort, baudRate);
-  res.status(200).send(`Cổng serial Exit ${comPort} đã được khởi tạo.`);
+  if (lastAnotherPortExit === comPort) {
+    res
+      .status(200)
+      .send(`Cổng serial Exit thứ 2 với port ${comPort} đã được tạo trước đó.`);
+    // console.log(
+    //   `Cổng serial Exit thứ 2 với port ${comPort} đã được tạo trước đó.`
+    // );
+    return;
+  } else {
+    initAnotherSerialPortExit(comPort, baudRate);
+    res
+      .status(200)
+      .send(`Cổng serial Exit thứ 2 với port ${comPort} đã được khởi tạo.`);
+  }
 };
 
 // Endpoint SSE để gửi dữ liệu RFID cho Entry

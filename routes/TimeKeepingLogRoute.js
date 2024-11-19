@@ -13,7 +13,7 @@ router.patch(
   middleware.verifyToken,
   TimeKeepingLogController.GetLogByID
 );
-router.patch(
+router.put(
   "/CreateTimeKeepingLog",
   middleware.verifyToken,
   TimeKeepingLogController.CreateLog
@@ -33,7 +33,7 @@ router.patch(
   middleware.verifyToken,
   TimeKeepingLogController.getLogsFromDayToDay
 );
-router.patch(
+router.get(
   "/GetTimeKeepingLogToday",
   middleware.verifyToken,
   TimeKeepingLogController.getLogsToDay
