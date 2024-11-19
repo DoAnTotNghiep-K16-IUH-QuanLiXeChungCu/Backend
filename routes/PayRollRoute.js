@@ -12,12 +12,12 @@ router.patch(
   middleware.verifyToken,
   payRollcontroller.GetPayRollByID
 );
-router.post(
+router.put(
   "/UpdatePayRoll",
   middleware.verifyToken,
   payRollcontroller.UpdatePayRoll
 );
-router.put(
+router.post(
   "/CreatePayRoll",
   middleware.verifyToken,
   payRollcontroller.CreatePayRoll
@@ -26,5 +26,10 @@ router.delete(
   "/DeletePayRoll",
   middleware.verifyToken,
   payRollcontroller.DeletePayRoll
+);
+router.patch(
+  "/CheckPayRollByEmployeeAndPayPeriod",
+  middleware.verifyToken,
+  payRollcontroller.CheckPayRollByEmployeeAndPayPeriod
 );
 module.exports = router;

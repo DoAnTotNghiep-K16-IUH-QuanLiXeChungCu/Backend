@@ -18,10 +18,7 @@ const payRollFomulaSchema = new Schema(
     allowance: {
       type: Number,
       required: true,
-    },
-    note: {
-      type: String,
-    },
+    }
   },
   {
     collection: "pay_roll_fomulas",

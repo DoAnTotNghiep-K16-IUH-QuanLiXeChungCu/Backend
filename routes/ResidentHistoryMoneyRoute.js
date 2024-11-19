@@ -27,5 +27,8 @@ router.patch("/GetYearlyStatistics", middleware.verifyToken , ResidentHistoryMon
 // http://localhost:3000/api/v1/residentHistoryMoney/FilterResidentHistoryMoneys
 router.patch("/FilterResidentHistoryMoneys", middleware.verifyToken , ResidentHistoryMoneyController.FilterResidentHistoryMoneys);
 
+// http://localhost:3000/api/v1/residentHistoryMoney/CheckResidentHistoryMoneys
+router.patch("/CheckResidentHistoryMoneys", middleware.verifyToken , ResidentHistoryMoneyController.CheckResidentHistoryMoneys);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

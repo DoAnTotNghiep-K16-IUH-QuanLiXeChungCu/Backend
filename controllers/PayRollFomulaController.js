@@ -152,9 +152,13 @@ const UpdatePayRollFomula = async (req, res) => {
 
 const CreatePayRollFomula = async (req, res) => {
   try {
-    const { basicRatePerHour, overtimeRate, deductions, allowance, note } =
-      req.body;
-    if (!basicRatePerHour || !overtimeRate || !deductions || !allowance) {
+    const { basicRatePerHour, overtimeRate, deductions, allowance } = req.body;
+    if (
+      basicRatePerHour === undefined ||
+      overtimeRate === undefined ||
+      deductions === undefined ||
+      allowance === undefined
+    ) {
       return res.status(400).json({
         status: 400,
         data: null,
@@ -168,7 +172,6 @@ const CreatePayRollFomula = async (req, res) => {
       overtimeRate,
       deductions,
       allowance,
-      note,
     });
 
     // Lưu vào MongoDB

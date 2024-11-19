@@ -10,7 +10,7 @@ router.patch(
   TimeKeepingController.GetAllTimeKeepings
 );
 
-// http://localhost:3000/api/v1/TimeKeeping/GetAllTimeKeeping
+// http://localhost:3000/api/v1/TimeKeeping/CreateTimeKeeping
 router.post(
   "/CreateTimeKeeping",
   middleware.verifyToken,
@@ -24,7 +24,7 @@ router.put(
   TimeKeepingController.UpdateTimeKeeping
 );
 
-// http://localhost:3000/api/v1/TimeKeeping/UpdateTimeKeeping
+// http://localhost:3000/api/v1/TimeKeeping/DeleteTimeKeeping
 router.delete(
   "/DeleteTimeKeeping",
   middleware.verifyToken,

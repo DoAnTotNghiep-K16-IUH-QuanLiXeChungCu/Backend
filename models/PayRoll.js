@@ -15,34 +15,41 @@ const payRollSchema = new Schema(
     totalRegularHours: {
       type: Number,
       required: true,
+      default: 0,
     },
     totalOvertimeHours: {
       type: Number,
       required: true,
+      default: 0,
     },
     basicSalary: {
       type: Number,
       required: true,
+      default: 0,
     },
     overtimeSalary: {
       type: Number,
       required: true,
+      default: 0,
     },
     deductions: {
       type: Number,
       required: true,
+      default: 0,
     },
     allowance: {
       type: Number,
       required: true,
+      default: 0,
     },
     totalSalary: {
       type: Number,
       required: true,
+      default: 0,
     },
     note: {
       type: String,
-      required: true,
+      default: "" ,
     },
   },
   {
