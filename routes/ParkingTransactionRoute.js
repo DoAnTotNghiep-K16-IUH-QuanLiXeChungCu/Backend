@@ -13,7 +13,7 @@ router.patch(
   middleware.verifyToken,
   ParkingTransactionController.getParkingTransactionByID
 );
-router.patch(
+router.post(
   "/CreateParkingTransaction",
   middleware.verifyToken,
   ParkingTransactionController.createParkingTransaction

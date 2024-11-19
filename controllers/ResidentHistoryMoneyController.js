@@ -3,7 +3,6 @@ const ResidentHistoryMoney = require("../models/ResidentHistoryMoney");
 const Vehicle = require("../models/Vehicle");
 const ParkingSlot = require("../models/ParkingSlot");
 const RFIDCard = require("../models/RFIDCard");
-
 const mongoose = require("mongoose");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
@@ -896,11 +895,12 @@ const FilterResidentHistoryMoneys = async (req, res) => {
     });
   }
 };
-const GetResidentHistoryMoneyByRFIDCard = async (req, res) => {
-  try {
-    const { rFIDCardID } = req.params;
 
-    // Kiểm tra rFIDCardID hợp lệ
+const CheckResidentHistoryMoneys = async (req, res) => {
+  try {
+    const { rFIDCardID, licensePlate } = req.body;
+
+    // Kiểm tra tính hợp lệ của rFIDCardID và licensePlate
     if (!mongoose.Types.ObjectId.isValid(rFIDCardID)) {
       return res.status(400).json({
         status: 400,
@@ -909,81 +909,65 @@ const GetResidentHistoryMoneyByRFIDCard = async (req, res) => {
       });
     }
 
-    const rfidCardExists = await RFIDCard.findOne({
-      _id: rFIDCardID,
+    if (!licensePlate || typeof licensePlate !== "string") {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "licensePlate không hợp lệ.",
+      });
+    }
+
+    // Tìm xe với biển số cung cấp
+    const vehicle = await Vehicle.findOne({
+      licensePlate: licensePlate,
       isDelete: false,
     });
-    if (!rfidCardExists) {
+
+    if (!vehicle) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: "Không tìm thấy rFIDCardID trong hệ thống.",
+        error: "Không tìm thấy xe với licensePlate cung cấp.",
       });
     }
 
-    // Tìm tất cả lịch sử liên quan đến RFID Card
-    const residentHistoryMoneyRecords = await ResidentHistoryMoney.find({
-      rFIDCardID,
-    })
-      .populate({
-        path: "vehicleId",
-        model: "Vehicle",
-        populate: {
-          path: "customerId",
-          model: "Customer",
-          populate: {
-            path: "apartmentsId",
-            model: "Apartment",
-            select: "name",
-          },
-          select: "fullName phoneNumber address isResident",
-        },
-        select: "licensePlate type brand color",
-      })
-      .populate({
-        path: "parking_slotId",
-        model: "ParkingSlot",
-        select: "slotCode slotType availableSlots totalQuantity",
-      })
-      .populate({
-        path: "rFIDCardID",
-        model: "RFIDCard",
-        select: "uuid createdAt",
-      });
+    // Tìm bản ghi ResidentHistoryMoney mới nhất khớp với rFIDCardID và vehicleId
+    const residentHistoryMoney = await ResidentHistoryMoney.findOne({
+      vehicleId: vehicle._id,
+      rFIDCardID: rFIDCardID,
+      isDelete: false,
+    }).sort({ endDate: -1 }); // Sắp xếp theo endDate giảm dần, lấy bản ghi mới nhất
 
-    if (
-      !residentHistoryMoneyRecords ||
-      residentHistoryMoneyRecords.length === 0
-    ) {
+    if (!residentHistoryMoney) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: "Không tìm thấy lịch sử thanh toán cho rFIDCardID này.",
+        error: "Không tìm thấy bản ghi ResidentHistoryMoney phù hợp.",
       });
     }
 
-    // Định dạng dữ liệu trả về
-    const formattedData = residentHistoryMoneyRecords.map((record) => ({
-      ...record._doc,
-      vehicle: {
-        ...record.vehicleId._doc,
-        customer: {
-          ...record.vehicleId.customerId._doc,
-          apartment: record.vehicleId.customerId.apartmentsId,
-        },
-      },
-      parkingSlot: record.parking_slotId,
-      rFIDCard: record.rFIDCardID,
-    }));
+    const currentDate = new Date();
+    console.log("residentHistoryMoney.endDate:", residentHistoryMoney.endDate);
+    console.log("currentDate:", currentDate);
 
+    // Kiểm tra nếu endDate đã qua hạn
+    if (residentHistoryMoney.endDate < currentDate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thẻ này đã hết hạn.",
+      });
+    }
+
+    // Trả về bản ghi ResidentHistoryMoney nếu còn hạn
     return res.status(200).json({
       status: 200,
-      data: formattedData,
+      data: residentHistoryMoney,
       error: null,
     });
   } catch (error) {
     console.error(
-      "Lỗi không xác định trong GetResidentHistoryMoneyByRFIDCard:",
+      "Lỗi không xác định trong CheckResidentHistoryMoneys:",
       error
     );
     return res.status(500).json({
@@ -993,6 +977,7 @@ const GetResidentHistoryMoneyByRFIDCard = async (req, res) => {
     });
   }
 };
+
 module.exports = {
   GetAllResidentHistoryMoneys,
   CreateResidentHistoryMoney,
@@ -1002,5 +987,5 @@ module.exports = {
   GetMonthlyStatistics,
   GetYearlyStatistics,
   FilterResidentHistoryMoneys,
-  GetResidentHistoryMoneyByRFIDCard,
+  CheckResidentHistoryMoneys,
 };

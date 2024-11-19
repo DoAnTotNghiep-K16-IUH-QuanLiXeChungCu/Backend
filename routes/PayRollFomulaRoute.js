@@ -3,7 +3,7 @@ const payRollFomulaController = require("../controllers/PayRollFomulaController"
 const middleware = require("../middleware/middlewareController");
 const router = Router();
 router.patch(
-  "/GetAllPayRollFomulas",
+  "/GetAllPayRollFomula",
   middleware.verifyToken,
   payRollFomulaController.GetAllPayRollFomula
 );
@@ -12,12 +12,12 @@ router.patch(
   middleware.verifyToken,
   payRollFomulaController.GetPayRollFomulaByID
 );
-router.post(
+router.put(
   "/UpdatePayRollFomula",
   middleware.verifyToken,
   payRollFomulaController.UpdatePayRollFomula
 );
-router.put(
+router.post(
   "/CreatePayRollFomula",
   middleware.verifyToken,
   payRollFomulaController.CreatePayRollFomula

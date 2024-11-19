@@ -200,60 +200,44 @@ const UpdatePayRoll = async (req, res) => {
 
 const CreatePayRoll = async (req, res) => {
   try {
-    const {
-      userID,
-      payPeriod,
-      totalRegularHours,
-      totalOvertimeHours,
-      basicSalary,
-      overtimeSalary,
-      deductions,
-      allowance,
-      totalSalary,
-      note,
-    } = req.body;
+    const { userID } = req.body;
 
-    // Kiểm tra các trường bắt buộc
+    // Kiểm tra tính hợp lệ của userID
     if (!mongoose.Types.ObjectId.isValid(userID)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "users_shiftId không hợp lệ.",
+        error: "userID không hợp lệ.",
       });
     }
+
+    // Kiểm tra xem user có tồn tại không
     const user = await User.findById(userID).select(
       "fullname age address phoneNumber"
     );
-    // console.log("user", user);
 
     if (!user) {
-      return res.status(400).json({
-        status: 400,
+      return res.status(404).json({
+        status: 404,
         data: null,
-        error: "user không tồn tại trong cơ sở dữ liệu.",
+        error: "User không tồn tại trong cơ sở dữ liệu.",
       });
     }
 
-    if (
-      !payPeriod ||
-      !totalRegularHours ||
-      !totalOvertimeHours ||
-      !basicSalary ||
-      !overtimeSalary ||
-      !deductions ||
-      !allowance ||
-      !totalSalary
-    ) {
-      return res.status(400).json({
-        status: 400,
-        data: null,
-        error: "Thiếu thông tin bắt buộc.",
-      });
-    }
+    // Giá trị mặc định cho các trường còn lại
+    const payPeriod = new Date(); // Ngày hiện tại
+    const totalRegularHours = 0;
+    const totalOvertimeHours = 0;
+    const basicSalary = 0;
+    const overtimeSalary = 0;
+    const deductions = 0;
+    const allowance = 0;
+    const totalSalary = 0;
+    const note = "";
 
     // Tạo PayRoll mới
     const payRoll = new PayRoll({
-      userID,
+      userID, // Đảm bảo đúng tên trường trong schema
       payPeriod,
       totalRegularHours,
       totalOvertimeHours,
@@ -267,7 +251,9 @@ const CreatePayRoll = async (req, res) => {
 
     // Lưu vào MongoDB
     await payRoll.save();
-    const newPayRoll = await UserShift.findById(payRoll._id).populate({
+
+    // Lấy thông tin PayRoll mới tạo với user chi tiết
+    const newPayRoll = await PayRoll.findById(payRoll._id).populate({
       path: "userID",
       select: "fullname age address phoneNumber email",
     });
@@ -326,10 +312,65 @@ const DeletePayRoll = async (req, res) => {
   }
 };
 
+const CheckPayRollByEmployeeAndPayPeriod = async (req, res) => {
+  try {
+    const { userID } = req.body;
+
+    // Kiểm tra userID hợp lệ
+    if (!mongoose.Types.ObjectId.isValid(userID)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "userID không hợp lệ.",
+      });
+    }
+
+    // Lấy tháng và năm hiện tại
+    const now = new Date();
+    const currentMonth = now.getMonth(); // Tháng hiện tại (0-11)
+    const currentYear = now.getFullYear();
+
+    // Tính ngày đầu tháng và cuối tháng
+    const startDate = new Date(currentYear, currentMonth, 1); // Ngày đầu tháng
+    const endDate = new Date(currentYear, currentMonth + 1, 0); // Ngày cuối tháng
+
+    // Tìm PayRoll theo userID, tháng và năm hiện tại
+    const payRoll = await PayRoll.findOne({
+      userID,
+      payPeriod: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    });
+
+    if (!payRoll) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy PayRoll cho nhân viên trong tháng này.",
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: payRoll,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong CheckPayRollByEmployeeAndPayPeriod:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+
 module.exports = {
   GetAllPayRolls,
   GetPayRollByID,
   UpdatePayRoll,
   CreatePayRoll,
   DeletePayRoll,
+  CheckPayRollByEmployeeAndPayPeriod
 };

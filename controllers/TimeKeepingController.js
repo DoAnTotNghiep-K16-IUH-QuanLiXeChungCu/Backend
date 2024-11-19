@@ -1,6 +1,9 @@
 const TimeKeeping = require("../models/TimeKeeping");
 const User = require("../models/User");
 const Shift = require("../models/Shift");
+const PayRoll = require("../models/PayRoll");
+const PayRollFomula = require("../models/PayRollFomula");
+const UserShift = require("../models/UserShift");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
 const mongoose = require("mongoose");
@@ -75,18 +78,16 @@ const GetAllTimeKeepings = async (req, res) => {
 
 const CreateTimeKeeping = async (req, res) => {
   try {
-    const { userId, shiftId, dateTime } = req.body;
+    const { userId, shiftId } = req.body;
 
-    // Kiểm tra các trường bắt buộc
-    if (!userId || !shiftId || !dateTime) {
+    if (!userId || !shiftId) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Các trường userId, shiftId, và dateTime đều bắt buộc.",
+        error: "Các trường userId và shiftId đều bắt buộc.",
       });
     }
 
-    // Kiểm tra xem userId có tồn tại không
     const userExists = await User.findById(userId);
     if (!userExists) {
       return res.status(400).json({
@@ -96,7 +97,6 @@ const CreateTimeKeeping = async (req, res) => {
       });
     }
 
-    // Kiểm tra xem shiftId có tồn tại không
     const shiftExists = await Shift.findById(shiftId);
     if (!shiftExists) {
       return res.status(400).json({
@@ -106,53 +106,62 @@ const CreateTimeKeeping = async (req, res) => {
       });
     }
 
-    // Kiểm tra nếu dateTime là một ngày trong tương lai
-    const currentDateTime = new Date();
-    const parsedDateTime = new Date(dateTime);
-    console.log(currentDateTime);
-    console.log(parsedDateTime);
-    if (parsedDateTime <= currentDateTime) {
-      return res.status(400).json({
-        status: 400,
-        data: null,
-        error: "dateTime phải là một ngày trong tương lai.",
-      });
-    }
-
-    // Kiểm tra xem TimeKeeping đã tồn tại hay chưa (cặp userId, shiftId, dateTime)
+    // Kiểm tra nếu đã tồn tại TimeKeeping với userId và checkOut: null
     const existingTimeKeeping = await TimeKeeping.findOne({
       userId,
-      shiftId,
-      dateTime: parsedDateTime,
+      checkOut: null,
     });
+
     if (existingTimeKeeping) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "TimeKeeping đã tồn tại cho userId, shiftId, và dateTime này.",
+        error: "Đã tồn tại bản ghi TimeKeeping chưa checkOut cho userId này.",
       });
     }
 
-    // Tạo TimeKeeping mới
+    const currentDate = new Date();
+
+    // Lấy ngày (không bao gồm giờ phút giây) từ currentDate
+    const startOfDay = new Date(currentDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(currentDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Kiểm tra UserShift theo userId, shiftId và ngày
+    const userShiftExists = await UserShift.findOne({
+      userId,
+      shiftId,
+      dateTime: { $gte: startOfDay, $lte: endOfDay }, // Kiểm tra trong cùng ngày
+    });
+
+    if (!userShiftExists) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Ca làm việc không khớp với ngày hiện tại.",
+      });
+    }
+
     const newTimeKeeping = new TimeKeeping({
       userId,
       shiftId,
-      dateTime: parsedDateTime,
-      checkIn: "",
-      checkOut: "",
+      workDate: currentDate,
+      checkIn: currentDate,
+      checkOut: null,
     });
 
-    // Lưu vào cơ sở dữ liệu
     await newTimeKeeping.save();
 
     const populatedTimeKeeping = await TimeKeeping.findById(newTimeKeeping._id)
       .populate({
         path: "userId",
-        select: "username fullname age", // Chỉ lấy các trường cần thiết từ User
+        select: "username fullname age",
       })
       .populate({
         path: "shiftId",
-        select: "shiftName", // Chỉ lấy các trường cần thiết từ Shift
+        select: "shiftName",
       });
 
     return res.status(201).json({
@@ -172,109 +181,145 @@ const CreateTimeKeeping = async (req, res) => {
 
 const UpdateTimeKeeping = async (req, res) => {
   try {
-    const { id, userId, shiftId, dateTime, checkIn, checkOut } = req.body;
-    // Kiểm tra ID có hợp lệ không
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    const { shiftId, userId } = req.body;
+
+    if (!shiftId || !userId) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "ID không hợp lệ.",
+        error: "shiftId và userId là bắt buộc.",
       });
     }
 
-    // Tìm TimeKeeping với ID đã cho
-    const timeKeeping = await TimeKeeping.findById(id);
+    // Tìm TimeKeeping với shiftId và userId
+    const timeKeeping = await TimeKeeping.findOne({
+      shiftId,
+      userId,
+      checkOut: null,
+    });
+
     if (!timeKeeping) {
       return res.status(404).json({
         status: 404,
         data: null,
-        error: "Không tìm thấy TimeKeeping với ID này.",
+        error: "Không tìm thấy TimeKeeping chưa có checkOut.",
       });
     }
 
-    // Nếu có userId mới, kiểm tra sự tồn tại của userId
-    if (userId) {
-      const userExists = await User.findById(userId);
-      if (!userExists) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: "userId không tồn tại trong cơ sở dữ liệu.",
-        });
-      }
-    }
+    const currentTime = new Date();
 
-    // Nếu có shiftId mới, kiểm tra sự tồn tại của shiftId
-    if (shiftId) {
-      const shiftExists = await Shift.findById(shiftId);
-      if (!shiftExists) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: "shiftId không tồn tại trong cơ sở dữ liệu.",
-        });
-      }
-    }
-    if (new Date(checkIn) >= new Date(checkOut)) {
-      return res.status(400).json({
-        status: 400,
+    // Lấy thông tin shift
+    const shift = await Shift.findById(shiftId);
+    if (!shift) {
+      return res.status(404).json({
+        status: 404,
         data: null,
-        error: "Thời gian checkin phải trước thời gian checkout.",
+        error: "Không tìm thấy thông tin shift.",
       });
     }
 
-    // Kiểm tra nếu có dateTime và nó phải là ngày trong tương lai
-    if (dateTime) {
-      const currentDateTime = new Date();
-      const parsedDateTime = new Date(dateTime);
-      if (parsedDateTime <= currentDateTime) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: "dateTime phải là một ngày trong tương lai.",
-        });
-      }
+    // Chuyển đổi startTime và endTime của shift sang đối tượng Date
+    const [startHour, startMinute] = shift.startTime.split(":").map(Number);
+    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
 
-      // Kiểm tra xem TimeKeeping đã tồn tại hay chưa cho cặp userId, shiftId, dateTime (ngoại trừ bản ghi hiện tại)
-      const existingTimeKeeping = await TimeKeeping.findOne({
-        userId: userId || TimeKeeping.userId,
-        shiftId: shiftId || TimeKeeping.shiftId,
-        dateTime: parsedDateTime,
-        _id: { $ne: id }, // Loại bỏ bản ghi hiện tại khỏi kết quả tìm kiếm
+    const shiftStart = new Date(currentTime);
+    shiftStart.setHours(startHour, startMinute, 0, 0);
+
+    const shiftEnd = new Date(currentTime);
+    shiftEnd.setHours(endHour, endMinute, 0, 0);
+
+    const checkIn = timeKeeping.checkIn;
+    const checkOut = currentTime;
+
+    let hoursWorked = Math.max((checkOut - checkIn) / (1000 * 60 * 60), 0); // Đảm bảo tổng số giờ làm không âm
+    let totalRegularHours = 0;
+    let totalOvertimeHours = 0;
+
+    // Lấy giá trị deductions từ PayRollFomula
+    const payRollFomula = await PayRollFomula.findOne();
+    if (!payRollFomula) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy công thức tính lương.",
       });
-
-      if (existingTimeKeeping) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: "TimeKeeping đã tồn tại cho userId, shiftId, và dateTime này.",
-        });
-      }
     }
 
-    // Cập nhật các trường cần thiết
-    timeKeeping.userId = userId || timeKeeping.userId;
-    timeKeeping.shiftId = shiftId || timeKeeping.shiftId;
-    timeKeeping.dateTime = dateTime || timeKeeping.dateTime;
-    timeKeeping.checkIn = dateTime || timeKeeping.checkIn;
-    timeKeeping.checkOut = dateTime || timeKeeping.checkOut;
+    // Tìm hoặc tạo PayRoll theo userID và tháng/năm hiện tại
+    const payPeriod = new Date(currentTime.getFullYear(), currentTime.getMonth());
+    let payRoll = await PayRoll.findOne({ userID: userId, payPeriod });
 
-    // Lưu lại bản ghi đã cập nhật
+    if (!payRoll) {
+      payRoll = new PayRoll({
+        userID: userId,
+        payPeriod,
+        totalRegularHours: 0,
+        totalOvertimeHours: 0,
+        basicSalary: 0,
+        overtimeSalary: 0,
+        deductions: 0,
+        allowance: 0,
+        totalSalary: 0,
+        note: "",
+      });
+    }
+
+    // Kiểm tra đi trễ hoặc về sớm
+    const isLate = checkIn > shiftStart;
+    const isEarly = checkOut < shiftEnd;
+
+    if (isLate || isEarly) {
+      // Tăng deductions bằng giá trị từ PayRollFomula
+      payRoll.deductions = Math.max(payRoll.deductions + payRollFomula.deductions, 0); // Đảm bảo không âm
+      const noteDate = checkIn.toLocaleDateString();
+      payRoll.note += `\nĐi làm trễ hoặc về sớm ngày ${noteDate}`;
+    }
+
+    // Cập nhật giờ làm thông thường
+    const shiftDuration = Math.max((shiftEnd - shiftStart) / (1000 * 60 * 60), 0);
+    totalRegularHours = Math.min(hoursWorked, shiftDuration);
+    payRoll.totalRegularHours = Math.max(payRoll.totalRegularHours + totalRegularHours, 0); // Không âm
+
+    // Cập nhật giờ làm thêm
+    if (hoursWorked > shiftDuration) {
+      totalOvertimeHours = Math.max(hoursWorked - shiftDuration, 0);
+      payRoll.totalOvertimeHours = Math.max(payRoll.totalOvertimeHours + totalOvertimeHours, 0); // Không âm
+
+      const noteDate = checkIn.toLocaleDateString();
+      payRoll.note += `\nLàm thêm giờ ngày ${noteDate}`;
+    }
+
+    // Cập nhật lương cơ bản và lương làm thêm giờ
+    payRoll.basicSalary = Math.max(
+      payRoll.basicSalary + totalRegularHours * payRollFomula.basicRatePerHour,
+      0
+    ); // Không âm
+    payRoll.overtimeSalary = Math.max(
+      payRoll.overtimeSalary + totalOvertimeHours * payRollFomula.overtimeRate,
+      0
+    ); // Không âm
+
+    // Cập nhật tổng lương
+    payRoll.totalSalary = Math.max(
+      payRoll.basicSalary + payRoll.allowance + payRoll.overtimeSalary + payRoll.allowance - payRoll.deductions,
+      0
+    ); // Không âm
+
+    // Lưu PayRoll
+    await payRoll.save();
+
+    // Cập nhật TimeKeeping
+    timeKeeping.checkOut = checkOut;
+    timeKeeping.hoursWorked = hoursWorked;
+
     await timeKeeping.save();
-
-    const populatedTimeKeeping = await TimeKeeping.findById(timeKeeping._id)
-      .populate({
-        path: "userId",
-        select: "username age fullname", // Lấy các trường cần thiết từ User
-      })
-      .populate({
-        path: "shiftId",
-        select: "shiftName", // Lấy các trường cần thiết từ Shift
-      });
 
     return res.status(200).json({
       status: 200,
-      data: populatedTimeKeeping,
+      data: {
+        timeKeeping,
+        payRoll,
+      },
       error: null,
     });
   } catch (error) {
