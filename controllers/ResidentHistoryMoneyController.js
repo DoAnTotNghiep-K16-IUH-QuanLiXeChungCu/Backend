@@ -61,7 +61,7 @@ const GetAllResidentHistoryMoneys = async (req, res) => {
       .populate({
         path: "rFIDCardID",
         model: "RFIDCard",
-        select: "uuid status", // Lấy trường từ RFIDCard
+        select: "uuid createdAt", // Lấy trường từ RFIDCard
       })
       .sort({ startDate: 1 }) // Sắp xếp theo ngày bắt đầu
       .skip(skip)
@@ -193,10 +193,7 @@ const CreateResidentHistoryMoney = async (req, res) => {
       });
     }
 
-    const rfidCardExists = await RFIDCard.findOne({
-      _id: rFIDCardID,
-      isDelete: false,
-    });
+    const rfidCardExists = await RFIDCard.findOne({ _id: rFIDCardID });
     if (!rfidCardExists) {
       return res.status(404).json({
         status: 404,
@@ -274,7 +271,7 @@ const CreateResidentHistoryMoney = async (req, res) => {
       .populate({
         path: "rFIDCardID",
         model: "RFIDCard",
-        select: "cardCode issueDate expirationDate isActive",
+        select: "uuid createdAt",
       });
 
     // Định dạng dữ liệu trả về
@@ -740,12 +737,12 @@ const FilterResidentHistoryMoneys = async (req, res) => {
           from: "rfid_cards", // Tên collection của RFIDCard
           localField: "rFIDCardID",
           foreignField: "_id",
-          as: "rFIDCardInfo", // Thêm thông tin RFIDCard vào kết quả
+          as: "rFIDCard", // Thêm thông tin RFIDCard vào kết quả
         },
       },
       {
         $unwind: {
-          path: "$rFIDCardInfo",
+          path: "$rFIDCard",
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -969,7 +966,10 @@ const CheckResidentHistoryMoneys = async (req, res) => {
       error: null,
     });
   } catch (error) {
-    console.error("Lỗi không xác định trong CheckResidentHistoryMoneys:", error);
+    console.error(
+      "Lỗi không xác định trong CheckResidentHistoryMoneys:",
+      error
+    );
     return res.status(500).json({
       status: 500,
       data: null,
@@ -987,5 +987,5 @@ module.exports = {
   GetMonthlyStatistics,
   GetYearlyStatistics,
   FilterResidentHistoryMoneys,
-  CheckResidentHistoryMoneys
+  CheckResidentHistoryMoneys,
 };

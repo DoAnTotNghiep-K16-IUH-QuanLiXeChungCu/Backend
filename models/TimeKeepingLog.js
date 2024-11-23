@@ -3,10 +3,6 @@ const Schema = mongoose.Schema;
 
 const timeKeepingLogSchema = new Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
     rfidId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "RFIDCard",
@@ -25,6 +21,10 @@ const timeKeepingLogSchema = new Schema(
       type: String,
       enum: ["in", "out"],
       required: true,
+    },
+    isDelete: {
+      type: Boolean,
+      default: false,
     },
   },
   {

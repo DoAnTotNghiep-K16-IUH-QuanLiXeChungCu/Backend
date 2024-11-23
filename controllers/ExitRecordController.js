@@ -11,8 +11,6 @@ const GetAllExitRecords = async (req, res) => {
     const userToken = req.user; // Lấy từ token jwt
 
     const { pageNumber = 1, pageSize = 10 } = req.body;
-
-    // Kiểm tra pageNumber và pageSize
     const parsedPageNumber = parseInt(pageNumber, 10);
     const parsedPageSize = parseInt(pageSize, 10);
 

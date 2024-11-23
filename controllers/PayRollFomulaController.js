@@ -104,8 +104,15 @@ const GetAllPayRollFomula = async (req, res) => {
 
 const UpdatePayRollFomula = async (req, res) => {
   try {
-    const { id, basicRatePerHour, overtimeRate, deductions, allowance, note } =
-      req.body;
+    const {
+      id,
+      role,
+      basicRatePerHour,
+      overtimeRate,
+      deductions,
+      allowance,
+      status,
+    } = req.body;
 
     // Kiểm tra id hợp lệ
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -126,13 +133,21 @@ const UpdatePayRollFomula = async (req, res) => {
         error: "Không tìm thấy PayRoll với ID này.",
       });
     }
+    const validTypes = ["Admin", "User", "Manager"];
+    if (!validTypes.includes(role)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Giá trị role phải là "car" hoặc "motor".',
+      });
+    }
     // Cập nhật các trường cần thiết
-    if (basicRatePerHour) payRoll.basicRatePerHour = basicRatePerHour;
-    if (overtimeRate) payRoll.overtimeRate = overtimeRate;
-    if (deductions) payRoll.deductions = deductions;
-    if (allowance) payRoll.allowance = allowance;
-    if (note) payRoll.note = note;
-
+    payRollFomula.role = role;
+    if (basicRatePerHour) payRollFomula.basicRatePerHour = basicRatePerHour;
+    if (overtimeRate) payRollFomula.overtimeRate = overtimeRate;
+    if (deductions) payRollFomula.deductions = deductions;
+    if (allowance) payRollFomula.allowance = allowance;
+    if (status) payRollFomula.status = status;
     // Lưu lại bản ghi đã cập nhật
     await payRollFomula.save();
     return res.status(200).json({
@@ -152,7 +167,18 @@ const UpdatePayRollFomula = async (req, res) => {
 
 const CreatePayRollFomula = async (req, res) => {
   try {
-    const { basicRatePerHour, overtimeRate, deductions, allowance } = req.body;
+    const { role, basicRatePerHour, overtimeRate, deductions, allowance } =
+      req.body;
+    console.log("role", role);
+
+    const validTypes = ["Admin", "User", "Manager"];
+    if (!validTypes.includes(role)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: 'Giá trị role phải là "Admin" hoặc "User" hoặc "Manager"',
+      });
+    }
     if (
       basicRatePerHour === undefined ||
       overtimeRate === undefined ||
@@ -168,6 +194,7 @@ const CreatePayRollFomula = async (req, res) => {
 
     // Tạo PayRoll mới
     const payRollFomula = new PayRollFomula({
+      role,
       basicRatePerHour,
       overtimeRate,
       deductions,

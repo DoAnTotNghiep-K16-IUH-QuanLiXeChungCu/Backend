@@ -25,9 +25,67 @@ const GetAllLogs = async (req, res) => {
     }
 
     const skip = (parsedPageNumber - 1) * parsedPageSize;
-
+    const filter = { isDelete: false };
     const totalLogs = await TimeKeepingLog.countDocuments();
-    const logs = await TimeKeepingLog.find()
+    const logs = await TimeKeepingLog.find(filter)
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      })
+      .skip(skip)
+      .limit(parsedPageSize);
+
+    const totalPages = Math.ceil(totalLogs / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        logs,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalLogs,
+        totalPages,
+      },
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetAllLogs:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+
+const GetAllLogsDelete = async (req, res) => {
+  try {
+    const { pageNumber = 1, pageSize = 10 } = req.body;
+
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+    const filter = { isDelete: true };
+    const totalLogs = await TimeKeepingLog.countDocuments();
+    const logs = await TimeKeepingLog.find(filter)
       .populate({ path: "rfidId", select: "uuid" })
       .populate({
         path: "userID",
@@ -72,8 +130,11 @@ const GetLogByID = async (req, res) => {
     }
 
     const log = await TimeKeepingLog.findById(id)
-      .populate({ path: "rfidId", select: "cardNumber" })
-      .populate({ path: "userID", select: "name email" });
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      });
 
     if (!log) {
       return res.status(404).json({
@@ -100,9 +161,9 @@ const GetLogByID = async (req, res) => {
 
 const CreateLog = async (req, res) => {
   try {
-    const { name, rfidId, userID, scanTime, status } = req.body;
+    const { rfidId, userID, status, scanTime } = req.body;
 
-    if (!name || !rfidId || !userID || !scanTime || !status) {
+    if (!rfidId || !userID || !status) {
       return res.status(400).json({
         status: 400,
         data: null,
@@ -120,20 +181,28 @@ const CreateLog = async (req, res) => {
         error: "rfidId hoặc userID không hợp lệ.",
       });
     }
-
+    const isDelete = false;
     const newLog = new TimeKeepingLog({
-      name,
       rfidId,
       userID,
-      scanTime,
+      scanTime:
+        scanTime ||
+        new Date(new Date().getTime() + 7 * 60 * 60 * 1000)
+          .toISOString()
+          .replace("T", " ")
+          .slice(0, 19), // Sử dụng thời gian hiện tại nếu không có scanTime từ client
       status,
+      isDelete,
     });
 
     await newLog.save();
 
     const createdLog = await TimeKeepingLog.findById(newLog._id)
-      .populate({ path: "rfidId", select: "cardNumber" })
-      .populate({ path: "userID", select: "name email" });
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      });
 
     return res.status(201).json({
       status: 201,
@@ -152,7 +221,7 @@ const CreateLog = async (req, res) => {
 
 const UpdateLog = async (req, res) => {
   try {
-    const { id, name, rfidId, userID, scanTime, status } = req.body;
+    const { id, rfidId, userID, scanTime, status, isDelete } = req.body;
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -172,17 +241,20 @@ const UpdateLog = async (req, res) => {
       });
     }
 
-    if (name) log.name = name;
     if (rfidId && mongoose.Types.ObjectId.isValid(rfidId)) log.rfidId = rfidId;
     if (userID && mongoose.Types.ObjectId.isValid(userID)) log.userID = userID;
     if (scanTime) log.scanTime = scanTime;
     if (status) log.status = status;
+    if (typeof isDelete !== "undefined") log.isDelete = isDelete;
 
     await log.save();
 
     const updatedLog = await TimeKeepingLog.findById(id)
-      .populate({ path: "rfidId", select: "cardNumber" })
-      .populate({ path: "userID", select: "name email" });
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      });
 
     return res.status(200).json({
       status: 200,
@@ -211,9 +283,10 @@ const DeleteLog = async (req, res) => {
       });
     }
 
-    const deletedLog = await TimeKeepingLog.findByIdAndDelete(id);
+    // Tìm và cập nhật trường isDelete thành true
+    const updatedLog = await TimeKeepingLog.findByIdAndDelete(id);
 
-    if (!deletedLog) {
+    if (!updatedLog) {
       return res.status(404).json({
         status: 404,
         data: null,
@@ -223,7 +296,7 @@ const DeleteLog = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
-      data: { message: "Bản ghi đã được xóa thành công.", deletedLog },
+      data: { message: "Bản ghi đã được đánh dấu là xóa.", updatedLog },
       error: null,
     });
   } catch (error) {
@@ -235,6 +308,7 @@ const DeleteLog = async (req, res) => {
     });
   }
 };
+
 const getLogsFromDayToDay = async (req, res) => {
   try {
     const { startDate, endDate } = req.body;
@@ -250,10 +324,15 @@ const getLogsFromDayToDay = async (req, res) => {
 
     const logs = await TimeKeepingLog.find({
       scanTime: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
+        $gte: startDate,
+        $lte: endDate,
       },
-    }).populate("rfidId userID", "name rfid");
+    })
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      });
 
     if (logs.length === 0) {
       return res.status(404).json({
@@ -280,29 +359,44 @@ const getLogsFromDayToDay = async (req, res) => {
 
 const getLogsToDay = async (req, res) => {
   try {
-    const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    const now = new Date();
+    const startOfDay = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    const endOfDay = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
     const logs = await TimeKeepingLog.find({
       scanTime: {
         $gte: startOfDay,
         $lte: endOfDay,
       },
-    }).populate("rfidId userID", "name rfid");
-
-    if (logs.length === 0) {
-      return res.status(404).json({
-        status: 404,
-        data: null,
-        error: "Không tìm thấy log nào trong ngày hôm nay.",
+      isDelete: false,
+    })
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
       });
-    }
 
     return res.status(200).json({
       status: 200,
       data: logs,
-      error: null,
+      error:
+        logs.length === 0 ? "Không tìm thấy log nào trong ngày hôm nay." : null,
     });
   } catch (error) {
     console.error("Lỗi trong getLogsToDay:", error);
@@ -334,7 +428,12 @@ const getLogsPerMonth = async (req, res) => {
         $gte: startOfMonth,
         $lte: endOfMonth,
       },
-    }).populate("rfidId userID", "name rfid");
+    })
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      });
 
     if (logs.length === 0) {
       return res.status(404).json({
@@ -379,7 +478,12 @@ const getLogsPerYear = async (req, res) => {
         $gte: startOfYear,
         $lte: endOfYear,
       },
-    }).populate("rfidId userID", "name rfid");
+    })
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      });
 
     if (logs.length === 0) {
       return res.status(404).json({
@@ -405,6 +509,7 @@ const getLogsPerYear = async (req, res) => {
 };
 module.exports = {
   GetAllLogs,
+  GetAllLogsDelete,
   GetLogByID,
   CreateLog,
   UpdateLog,

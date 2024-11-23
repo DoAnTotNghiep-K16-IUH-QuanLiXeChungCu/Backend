@@ -40,7 +40,7 @@ const login = async (req, res) => {
     }
 
     // Tìm người dùng theo username
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ username, isDelete: false });
     if (!user) {
       return sendResponse("401", "", "Tên đăng nhập không hợp lệ");
     }
@@ -72,8 +72,15 @@ const login = async (req, res) => {
 };
 
 const signup = async (req, res) => {
-  const { username, password, age, address, fullname, phoneNumber, email } =
-    req.body;
+  const {
+    username,
+    password,
+    birthDay,
+    address,
+    fullname,
+    phoneNumber,
+    email,
+  } = req.body;
 
   // Regex để kiểm tra các định dạng
   const usernameRegex = /^[a-zA-Z0-9]+$/; // Username không dấu và không ký tự đặc biệt
@@ -117,13 +124,13 @@ const signup = async (req, res) => {
     }
 
     // Kiểm tra xem username đã tồn tại hay chưa
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findOne({ username, isDelete: false });
     if (existingUser) {
       return sendResponse("400", "", "Tên đăng nhập đã tồn tại");
     }
 
     // Kiểm tra xem email đã được sử dụng chưa
-    const existingEmail = await User.findOne({ email });
+    const existingEmail = await User.findOne({ email, isDelete: false });
     if (existingEmail) {
       return sendResponse("400", "", "Email đã được sử dụng");
     }
@@ -136,7 +143,7 @@ const signup = async (req, res) => {
     const newUser = new User({
       username: username,
       password: hashedPassword, // Mật khẩu đã được mã hóa
-      age: age,
+      birthDay: birthDay,
       fullname: fullname,
       address: address,
       phoneNumber: phoneNumber,
@@ -228,19 +235,92 @@ const GetAllUsers = async (req, res) => {
     });
   }
 };
+const GetAllUsersNonDelete = async (req, res) => {
+  try {
+    const { pageNumber = 1, pageSize = 10 } = req.body;
 
+    // Kiểm tra pageNumber và pageSize
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+
+    // Tổng số người dùng
+    const totalUsers = await User.countDocuments();
+
+    if (totalUsers === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không có người dùng nào được tìm thấy.",
+      });
+    }
+
+    // Lấy danh sách người dùng với phân trang
+    const users = await User.find({ isDelete: false })
+      .select("-password") // Bỏ trường password khi trả về
+      .skip(skip)
+      .limit(parsedPageSize);
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy người dùng cho trang này.",
+      });
+    }
+
+    const totalPages = Math.ceil(totalUsers / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        users, // Danh sách người dùng
+        currentPage: parsedPageNumber, // Trang hiện tại
+        pageSize: parsedPageSize, // Số lượng bản ghi mỗi trang
+        totalUsers, // Tổng số người dùng
+        totalPages, // Tổng số trang
+      },
+      error: null,
+    });
+  } catch (error) {
+    console.error(`Lỗi trong GetAllUsers:`, error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 const UpdateUser = async (req, res) => {
   try {
     const {
       id,
       username,
       fullname,
-      age,
+      birthDay,
       address,
       phoneNumber,
       role,
       password,
-      email, // Thêm email
+      email,
+      isDelete, // Thêm email
     } = req.body;
 
     // Kiểm tra tính hợp lệ của id
@@ -319,12 +399,12 @@ const UpdateUser = async (req, res) => {
 
     // Nếu role có trong request, kiểm tra xem nó có hợp lệ hay không
     if (role) {
-      const validRoles = ["Admin", "User"];
+      const validRoles = ["Admin", "User", "Manager"];
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'Giá trị role phải là "Admin" hoặc "User".',
+          error: 'Giá trị role phải là "Admin" hoặc "User","Manager".',
         });
       }
     }
@@ -332,11 +412,12 @@ const UpdateUser = async (req, res) => {
     // Cập nhật các trường cần thiết
     user.username = username || user.username;
     user.fullname = fullname || user.fullname;
-    user.age = age || user.age;
+    user.birthDay = birthDay || user.birthDay;
     user.address = address || user.address;
     user.phoneNumber = phoneNumber || user.phoneNumber;
     user.role = role || user.role;
     user.email = email || user.email;
+    user.isDelete = isDelete !== undefined ? isDelete : user.isDelete;
 
     // Nếu có mật khẩu mới trong request, mã hóa mật khẩu trước khi lưu
     if (password) {
@@ -365,10 +446,52 @@ const UpdateUser = async (req, res) => {
     });
   }
 };
+const DeleteUsers = async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    console.log("id ", id);
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "ID không hợp lệ.",
+      });
+    }
+    // Xoá người dùng trong cơ sở dữ liệu
+    const deleteResult = await User.findByIdAndDelete(id);
+
+    // Kiểm tra số lượng bản ghi đã xoá
+    if (!deleteResult) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy người dùng nào với ID đã cung cấp.",
+      });
+    }
+
+    // Trả về kết quả thành công
+    return res.status(200).json({
+      status: 200,
+      data: { message: "Tài khoản đã được đánh dấu là xóa.", deleteResult },
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong deleteUsers:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 
 module.exports = {
   login,
   signup,
   GetAllUsers,
+  GetAllUsersNonDelete,
   UpdateUser,
+  DeleteUsers, // Thêm hàm deleteUsers vào module export
 };

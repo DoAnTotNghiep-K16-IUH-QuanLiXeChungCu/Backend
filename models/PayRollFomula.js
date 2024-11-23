@@ -3,6 +3,12 @@ const Schema = mongoose.Schema;
 
 const payRollFomulaSchema = new Schema(
   {
+    role: {
+      type: String,
+      required: true,
+      enum: ["Admin", "User", "Manager"],
+      default: "User",
+    },
     basicRatePerHour: {
       type: Number,
       required: true,
@@ -18,7 +24,12 @@ const payRollFomulaSchema = new Schema(
     allowance: {
       type: Number,
       required: true,
-    }
+    },
+    status: {
+      type: String,
+      enum: ["in_using", "not_using"],
+      default: "not_using",
+    },
   },
   {
     collection: "pay_roll_fomulas",

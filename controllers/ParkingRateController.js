@@ -76,6 +76,7 @@ const CreateParkingRate = async (req, res) => {
       weekly_rate,
       monthly_rate,
       yearly_rate,
+      status,
     } = req.body;
 
     // Kiểm tra các trường bắt buộc
@@ -87,7 +88,9 @@ const CreateParkingRate = async (req, res) => {
       !daily_rate ||
       !weekly_rate ||
       !monthly_rate ||
-      !yearly_rate
+      !yearly_rate ||
+      !status ||
+      !["in_using", "not_using"].includes(status)
     ) {
       return res.status(400).json({
         status: 400,
@@ -106,6 +109,7 @@ const CreateParkingRate = async (req, res) => {
       weekly_rate,
       monthly_rate,
       yearly_rate,
+      status,
     });
 
     // Lưu vào cơ sở dữ liệu
@@ -137,6 +141,7 @@ const UpdateParkingRate = async (req, res) => {
       weekly_rate,
       monthly_rate,
       yearly_rate,
+      status,
     } = req.body; // Lấy thêm vehicleType và hourly
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -173,7 +178,7 @@ const UpdateParkingRate = async (req, res) => {
       monthly_rate !== undefined ? monthly_rate : parkingRate.monthly_rate;
     parkingRate.yearly_rate =
       yearly_rate !== undefined ? yearly_rate : parkingRate.yearly_rate;
-
+    parkingRate.status = status || parkingRate.status;
     // Lưu lại bản ghi đã cập nhật
     await parkingRate.save();
 
@@ -240,6 +245,7 @@ const DeleteParkingRate = async (req, res) => {
         error: "ID không hợp lệ.",
       });
     }
+    // console.log("id", id);
 
     const parkingRate = await ParkingRate.findById(id);
 

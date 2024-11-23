@@ -275,7 +275,10 @@ const GetRFIDCardByUUID = async (req, res) => {
       });
     }
     // Tìm thẻ RFID theo uuid
-    const rfidCard = await RFIDCard.findOne({ uuid });
+    const rfidCard = await RFIDCard.findOne({ uuid }).populate({
+      path: "userId",
+      select: "_id fullname phoneNumber age",
+    });
 
     if (!rfidCard) {
       return res.status(404).json({
