@@ -32,6 +32,11 @@ const parkingRateSchema = new Schema(
       type: Number,
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["in_using", "not_using"],
+      required: true,
+    },
   },
   {
     collection: "parking_rates",

@@ -12,12 +12,12 @@ router.patch(
   middleware.verifyToken,
   payRollFomulaController.GetPayRollFomulaByID
 );
-router.put(
+router.post(
   "/UpdatePayRollFomula",
   middleware.verifyToken,
   payRollFomulaController.UpdatePayRollFomula
 );
-router.post(
+router.put(
   "/CreatePayRollFomula",
   middleware.verifyToken,
   payRollFomulaController.CreatePayRollFomula

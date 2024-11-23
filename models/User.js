@@ -21,8 +21,8 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    age: {
-      type: Number,
+    birthDay: {
+      type: Date,
       required: true,
     },
     address: {
@@ -36,6 +36,10 @@ const userSchema = new Schema(
     email: {
       type: String,
       required: true,
+    },
+    isDelete: {
+      type: Boolean,
+      default: false,
     },
   },
   {

@@ -9,6 +9,11 @@ router.patch(
   TimeKeepingLogController.GetAllLogs
 );
 router.patch(
+  "/GetAllTimeKeepingLogDelete",
+  middleware.verifyToken,
+  TimeKeepingLogController.GetAllLogsDelete
+);
+router.patch(
   "/GetTimeKeepingLogByID",
   middleware.verifyToken,
   TimeKeepingLogController.GetLogByID

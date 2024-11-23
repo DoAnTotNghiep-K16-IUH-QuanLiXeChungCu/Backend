@@ -126,7 +126,7 @@ const createParkingTransaction = async (req, res) => {
     }
 
     // Tìm mức giá cho loại phương tiện này
-    const rate = await ParkingRate.findOne({ vehicleType });
+    const rate = await ParkingRate.findOne({ vehicleType, status: "in_using" });
     if (!rate) {
       return res.status(404).json({
         status: 404,

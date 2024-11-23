@@ -236,7 +236,7 @@ const UpdateTimeKeeping = async (req, res) => {
     let totalOvertimeHours = 0;
 
     // Lấy giá trị deductions từ PayRollFomula
-    const payRollFomula = await PayRollFomula.findOne();
+    const payRollFomula = await PayRollFomula.findOne({ status: "in_using" });
     if (!payRollFomula) {
       return res.status(404).json({
         status: 404,
@@ -246,7 +246,10 @@ const UpdateTimeKeeping = async (req, res) => {
     }
 
     // Tìm hoặc tạo PayRoll theo userID và tháng/năm hiện tại
-    const payPeriod = new Date(currentTime.getFullYear(), currentTime.getMonth());
+    const payPeriod = new Date(
+      currentTime.getFullYear(),
+      currentTime.getMonth()
+    );
     let payRoll = await PayRoll.findOne({ userID: userId, payPeriod });
 
     if (!payRoll) {
@@ -270,20 +273,32 @@ const UpdateTimeKeeping = async (req, res) => {
 
     if (isLate || isEarly) {
       // Tăng deductions bằng giá trị từ PayRollFomula
-      payRoll.deductions = Math.max(payRoll.deductions + payRollFomula.deductions, 0); // Đảm bảo không âm
+      payRoll.deductions = Math.max(
+        payRoll.deductions + payRollFomula.deductions,
+        0
+      ); // Đảm bảo không âm
       const noteDate = checkIn.toLocaleDateString();
       payRoll.note += `\nĐi làm trễ hoặc về sớm ngày ${noteDate}`;
     }
 
     // Cập nhật giờ làm thông thường
-    const shiftDuration = Math.max((shiftEnd - shiftStart) / (1000 * 60 * 60), 0);
+    const shiftDuration = Math.max(
+      (shiftEnd - shiftStart) / (1000 * 60 * 60),
+      0
+    );
     totalRegularHours = Math.min(hoursWorked, shiftDuration);
-    payRoll.totalRegularHours = Math.max(payRoll.totalRegularHours + totalRegularHours, 0); // Không âm
+    payRoll.totalRegularHours = Math.max(
+      payRoll.totalRegularHours + totalRegularHours,
+      0
+    ); // Không âm
 
     // Cập nhật giờ làm thêm
     if (hoursWorked > shiftDuration) {
       totalOvertimeHours = Math.max(hoursWorked - shiftDuration, 0);
-      payRoll.totalOvertimeHours = Math.max(payRoll.totalOvertimeHours + totalOvertimeHours, 0); // Không âm
+      payRoll.totalOvertimeHours = Math.max(
+        payRoll.totalOvertimeHours + totalOvertimeHours,
+        0
+      ); // Không âm
 
       const noteDate = checkIn.toLocaleDateString();
       payRoll.note += `\nLàm thêm giờ ngày ${noteDate}`;
@@ -301,7 +316,11 @@ const UpdateTimeKeeping = async (req, res) => {
 
     // Cập nhật tổng lương
     payRoll.totalSalary = Math.max(
-      payRoll.basicSalary + payRoll.allowance + payRoll.overtimeSalary + payRoll.allowance - payRoll.deductions,
+      payRoll.basicSalary +
+        payRoll.allowance +
+        payRoll.overtimeSalary +
+        payRoll.allowance -
+        payRoll.deductions,
       0
     ); // Không âm
 

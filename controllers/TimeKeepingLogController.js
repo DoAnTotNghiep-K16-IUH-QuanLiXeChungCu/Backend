@@ -59,6 +59,64 @@ const GetAllLogs = async (req, res) => {
   }
 };
 
+const GetAllLogsDelete = async (req, res) => {
+  try {
+    const { pageNumber = 1, pageSize = 10 } = req.body;
+
+    const parsedPageNumber = parseInt(pageNumber, 10);
+    const parsedPageSize = parseInt(pageSize, 10);
+
+    if (isNaN(parsedPageNumber) || parsedPageNumber <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageNumber không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    if (isNaN(parsedPageSize) || parsedPageSize <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "pageSize không hợp lệ, phải là một số nguyên dương.",
+      });
+    }
+
+    const skip = (parsedPageNumber - 1) * parsedPageSize;
+    const filter = { isDelete: true };
+    const totalLogs = await TimeKeepingLog.countDocuments();
+    const logs = await TimeKeepingLog.find(filter)
+      .populate({ path: "rfidId", select: "uuid" })
+      .populate({
+        path: "userID",
+        select: "fullname email age phoneNumber address",
+      })
+      .skip(skip)
+      .limit(parsedPageSize);
+
+    const totalPages = Math.ceil(totalLogs / parsedPageSize);
+
+    return res.status(200).json({
+      status: 200,
+      data: {
+        logs,
+        currentPage: parsedPageNumber,
+        pageSize: parsedPageSize,
+        totalLogs,
+        totalPages,
+      },
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetAllLogs:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+
 const GetLogByID = async (req, res) => {
   try {
     const { id } = req.body;
@@ -127,7 +185,12 @@ const CreateLog = async (req, res) => {
     const newLog = new TimeKeepingLog({
       rfidId,
       userID,
-      scanTime: scanTime || new Date(), // Sử dụng thời gian hiện tại nếu không có scanTime từ client
+      scanTime:
+        scanTime ||
+        new Date(new Date().getTime() + 7 * 60 * 60 * 1000)
+          .toISOString()
+          .replace("T", " ")
+          .slice(0, 19), // Sử dụng thời gian hiện tại nếu không có scanTime từ client
       status,
       isDelete,
     });
@@ -182,7 +245,7 @@ const UpdateLog = async (req, res) => {
     if (userID && mongoose.Types.ObjectId.isValid(userID)) log.userID = userID;
     if (scanTime) log.scanTime = scanTime;
     if (status) log.status = status;
-    if (isDelete) log.isDelete = isDelete;
+    if (typeof isDelete !== "undefined") log.isDelete = isDelete;
 
     await log.save();
 
@@ -221,11 +284,7 @@ const DeleteLog = async (req, res) => {
     }
 
     // Tìm và cập nhật trường isDelete thành true
-    const updatedLog = await TimeKeepingLog.findByIdAndUpdate(
-      id,
-      { isDelete: true },
-      { new: true } // Trả về bản ghi đã được cập nhật
-    );
+    const updatedLog = await TimeKeepingLog.findByIdAndDelete(id);
 
     if (!updatedLog) {
       return res.status(404).json({
@@ -265,8 +324,8 @@ const getLogsFromDayToDay = async (req, res) => {
 
     const logs = await TimeKeepingLog.find({
       scanTime: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
+        $gte: startDate,
+        $lte: endDate,
       },
     })
       .populate({ path: "rfidId", select: "uuid" })
@@ -450,6 +509,7 @@ const getLogsPerYear = async (req, res) => {
 };
 module.exports = {
   GetAllLogs,
+  GetAllLogsDelete,
   GetLogByID,
   CreateLog,
   UpdateLog,
