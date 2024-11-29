@@ -5,6 +5,7 @@ const multer = require("multer");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
 const mongoose = require("mongoose");
+const RFIDCard = require("../models/RFIDCard");
 
 // Hàm đăng nhập
 const login = async (req, res) => {
@@ -80,7 +81,17 @@ const signup = async (req, res) => {
     fullname,
     phoneNumber,
     email,
+    rfidCard,
   } = req.body;
+
+  // Kiểm tra xem tất cả các trường cần thiết có trong request body không
+  if (!username || !password || !phoneNumber || !email) {
+    return res.status(400).json({
+      status: 400,
+      data: null,
+      error: "Các trường username, password, phoneNumber và email là bắt buộc.",
+    });
+  }
 
   // Regex để kiểm tra các định dạng
   const usernameRegex = /^[a-zA-Z0-9]+$/; // Username không dấu và không ký tự đặc biệt
@@ -100,7 +111,7 @@ const signup = async (req, res) => {
 
   try {
     // Kiểm tra định dạng username
-    if (!usernameRegex.test(username)) {
+    if (username && !usernameRegex.test(username)) {
       return sendResponse(
         "400",
         "",
@@ -109,17 +120,17 @@ const signup = async (req, res) => {
     }
 
     // Kiểm tra định dạng password
-    if (!passwordRegex.test(password)) {
+    if (password && !passwordRegex.test(password)) {
       return sendResponse("400", "", "Mật khẩu không được chứa khoảng trắng");
     }
 
     // Kiểm tra định dạng số điện thoại
-    if (!phoneNumberRegex.test(phoneNumber)) {
+    if (phoneNumber && !phoneNumberRegex.test(phoneNumber)) {
       return sendResponse("400", "", "Số điện thoại phải có 10 hoặc 11 chữ số");
     }
 
     // Kiểm tra định dạng email
-    if (!emailRegex.test(email)) {
+    if (email && !emailRegex.test(email)) {
       return sendResponse("400", "", "Email không hợp lệ");
     }
 
@@ -135,6 +146,11 @@ const signup = async (req, res) => {
       return sendResponse("400", "", "Email đã được sử dụng");
     }
 
+    // Nếu có rfidCard, kiểm tra tính hợp lệ của nó (giả sử là ObjectId hợp lệ)
+    if (rfidCard && !mongoose.Types.ObjectId.isValid(rfidCard)) {
+      return sendResponse("400", "", "rfidCard không hợp lệ");
+    }
+
     // Mã hóa mật khẩu
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -148,10 +164,14 @@ const signup = async (req, res) => {
       address: address,
       phoneNumber: phoneNumber,
       email: email,
+      rfidCard: rfidCard, // gắn rfidCard vào User
     });
 
     // Lưu người dùng mới vào cơ sở dữ liệu
     const savedUser = await newUser.save();
+
+    // Populate thông tin rfidCard
+    await savedUser.populate("rfidCard"); // Sử dụng .populate() để lấy thông tin chi tiết của rfidCard
 
     // Trả về thông tin người dùng (không bao gồm mật khẩu)
     const { password: _, ...info } = savedUser._doc;
@@ -161,7 +181,6 @@ const signup = async (req, res) => {
     return sendResponse("500", "", "Lỗi máy chủ");
   }
 };
-
 const GetAllUsers = async (req, res) => {
   try {
     const { pageNumber = 1, pageSize = 10 } = req.body;
@@ -201,7 +220,11 @@ const GetAllUsers = async (req, res) => {
 
     // Lấy danh sách người dùng với phân trang
     const users = await User.find({})
-      .select("-password") // Bỏ trường password khi trả về
+      .select("-password")
+      .populate({
+        path: "rfidCard",
+        select: "_id uuid ",
+      })
       .skip(skip)
       .limit(parsedPageSize);
 
@@ -274,7 +297,11 @@ const GetAllUsersNonDelete = async (req, res) => {
 
     // Lấy danh sách người dùng với phân trang
     const users = await User.find({ isDelete: false })
-      .select("-password") // Bỏ trường password khi trả về
+      .select("-password")
+      .populate({
+        path: "rfidCard",
+        select: "_id uuid ",
+      }) // Bỏ trường password khi trả về
       .skip(skip)
       .limit(parsedPageSize);
 
@@ -320,7 +347,8 @@ const UpdateUser = async (req, res) => {
       role,
       password,
       email,
-      isDelete, // Thêm email
+      isDelete,
+      rfidCard, // Thêm email
     } = req.body;
 
     // Kiểm tra tính hợp lệ của id
@@ -331,7 +359,14 @@ const UpdateUser = async (req, res) => {
         error: "ID không hợp lệ.",
       });
     }
-
+    if (!rfidCard || !mongoose.Types.ObjectId.isValid(rfidCard)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "rfidCard không hợp lệ.",
+      });
+    }
+    const rfidCardOb = await RFIDCard.findById(rfidCard);
     // Tìm người dùng theo id
     const user = await User.findById(id);
 
@@ -342,62 +377,64 @@ const UpdateUser = async (req, res) => {
         error: "Không tìm thấy người dùng với ID này.",
       });
     }
+    if (!rfidCardOb) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy thẻ với ID này.",
+      });
+    }
 
-    // Regex validation giống với signup
+    // Kiểm tra định dạng của các trường khác như username, email, v.v.
     const usernameRegex = /^[a-zA-Z0-9]+$/;
     const passwordRegex = /^\S+$/; // Không chứa khoảng trắng
     const phoneNumberRegex = /^\d{10,11}$/; // Chỉ chứa 10-11 số
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Kiểm tra định dạng email
 
-    // Kiểm tra định dạng username nếu có
     if (username && !usernameRegex.test(username)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Tên đăng nhập không được chứa dấu và chỉ bao gồm chữ cái và số",
+        error: "Tên đăng nhập không hợp lệ.",
       });
     }
 
-    // Kiểm tra định dạng password nếu có
     if (password && !passwordRegex.test(password)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Mật khẩu không được chứa khoảng trắng",
+        error: "Mật khẩu không được chứa khoảng trắng.",
       });
     }
 
-    // Kiểm tra định dạng số điện thoại nếu có
     if (phoneNumber && !phoneNumberRegex.test(phoneNumber)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Số điện thoại phải có 10 hoặc 11 chữ số",
+        error: "Số điện thoại phải có 10 hoặc 11 chữ số.",
       });
     }
 
-    // Kiểm tra định dạng email nếu có
     if (email && !emailRegex.test(email)) {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Email không hợp lệ",
+        error: "Email không hợp lệ.",
       });
     }
 
-    // Kiểm tra xem email có bị trùng lặp với người dùng khác không
     if (email) {
       const existingEmailUser = await User.findOne({ email });
       if (existingEmailUser && existingEmailUser.id !== id) {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: "Email đã được sử dụng bởi người dùng khác",
+          error: "Email đã được sử dụng bởi người dùng khác.",
         });
       }
     }
 
-    // Nếu role có trong request, kiểm tra xem nó có hợp lệ hay không
+    // Kiểm tra giá trị role
     if (role) {
       const validRoles = ["Admin", "User", "Manager"];
       if (!validRoles.includes(role)) {
@@ -418,8 +455,9 @@ const UpdateUser = async (req, res) => {
     user.role = role || user.role;
     user.email = email || user.email;
     user.isDelete = isDelete !== undefined ? isDelete : user.isDelete;
+    user.rfidCard = rfidCard || user.rfidCard;
 
-    // Nếu có mật khẩu mới trong request, mã hóa mật khẩu trước khi lưu
+    // Nếu có mật khẩu mới, mã hóa mật khẩu
     if (password) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
@@ -429,12 +467,17 @@ const UpdateUser = async (req, res) => {
     // Lưu lại bản ghi đã cập nhật
     await user.save();
 
-    // Bỏ trường password trước khi trả về
-    const { password: _, ...userWithoutPassword } = user._doc;
+    // Trả về thông tin người dùng đã cập nhật mà không có password
+    const userWithoutPassword = await User.findById(id)
+      .select("-password")
+      .populate({
+        path: "rfidCard",
+        select: "_id uuid",
+      });
 
     return res.status(200).json({
       status: 200,
-      data: userWithoutPassword, // Trả về thông tin người dùng mà không có password
+      data: userWithoutPassword,
       error: null,
     });
   } catch (error) {
@@ -446,6 +489,7 @@ const UpdateUser = async (req, res) => {
     });
   }
 };
+
 const DeleteUsers = async (req, res) => {
   try {
     const { id } = req.body;
@@ -487,11 +531,71 @@ const DeleteUsers = async (req, res) => {
   }
 };
 
+const GetUserByRFIDCard = async (req, res) => {
+  try {
+    const { uuid } = req.body;
+
+    // Kiểm tra xem uuid có được cung cấp hay không
+    if (!uuid) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "UUID không được cung cấp.",
+      });
+    }
+
+    // Tìm RFIDCard theo uuid
+    const RFIDCardOb = await RFIDCard.findOne({ uuid });
+
+    // Kiểm tra nếu không tìm thấy RFIDCard
+    if (!RFIDCardOb) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy Thẻ nào có ID đã cung cấp.",
+      });
+    }
+    const rfidCardIdString = RFIDCardOb._id.toString();
+
+    // Tìm người dùng dựa trên rfidCard đã tìm được
+    const userFinded = await User.findOne({
+      rfidCard: rfidCardIdString,
+    }).populate({
+      path: "rfidCard",
+      select: "_id uuid",
+    });
+
+    // Kiểm tra nếu không tìm thấy người dùng nào
+    if (!userFinded) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy User nào có thẻ với uuid đã cung cấp.",
+      });
+    }
+
+    // Trả về người dùng tìm được
+    return res.status(200).json({
+      status: 200,
+      data: userFinded,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetUserByRFIDCard:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+
 module.exports = {
   login,
   signup,
   GetAllUsers,
   GetAllUsersNonDelete,
   UpdateUser,
-  DeleteUsers, // Thêm hàm deleteUsers vào module export
+  DeleteUsers,
+  GetUserByRFIDCard, // Thêm hàm deleteUsers vào module export
 };

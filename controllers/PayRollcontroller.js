@@ -3,6 +3,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const { Op } = require("sequelize"); // Thêm dòng này
 const GetPayRollByID = async (req, res) => {
   try {
     const { id } = req.body;
@@ -179,10 +180,12 @@ const UpdatePayRoll = async (req, res) => {
 
     // Lưu lại bản ghi đã cập nhật
     await payRoll.save();
-    const newPayRoll = await UserShift.findById(payRoll._id).populate({
+
+    const newPayRoll = await PayRoll.findById(id).populate({
       path: "userID",
       select: "fullname age address phoneNumber email",
     });
+
     return res.status(200).json({
       status: 200,
       data: newPayRoll,
@@ -365,12 +368,116 @@ const CheckPayRollByEmployeeAndPayPeriod = async (req, res) => {
     });
   }
 };
+const GetPayRollByPeriod = async (req, res) => {
+  try {
+    const { month, year } = req.body;
+    // log;
+    // Kiểm tra đầu vào
+    if (!month || isNaN(month) || month < 1 || month > 12) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Tháng không hợp lệ. Vui lòng nhập giá trị từ 1 đến 12.",
+      });
+    }
 
+    if (
+      !year ||
+      isNaN(year) ||
+      year < 1900 ||
+      year > new Date().getFullYear() + 1
+    ) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Năm không hợp lệ. Vui lòng nhập giá trị hợp lệ.",
+      });
+    }
+
+    // Tính ngày đầu tháng và cuối tháng
+    const startDate = new Date(year, month - 1, 1); // Ngày đầu tháng
+    const endDate = new Date(year, month, 0); // Ngày cuối tháng
+    // Tìm tất cả bảng lương trong tháng và năm đã cho
+    const payRolls = await PayRoll.find({
+      payPeriod: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    }).populate({
+      path: "userID",
+      select: "fullname age address phoneNumber email",
+    });
+
+    if (!payRolls || payRolls.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: `Không tìm thấy bảng lương nào trong tháng ${month} năm ${year}.`,
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: payRolls,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetPayRollByPeriod:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+const GetPayRollByYearAndUserID = async (req, res) => {
+  const { year, userId } = req.body; // Lấy year và userId từ tham số yêu cầu
+
+  try {
+    // Tìm tất cả các bản ghi lương của nhân viên trong năm
+    const payRolls = await PayRoll.find({
+      userID: userId, // Tìm theo userId
+      payPeriod: {
+        $gte: new Date(`${year}-01-01`), // Lọc theo năm bắt đầu (01/01)
+        $lte: new Date(`${year}-12-31`), // Lọc theo năm kết thúc (31/12)
+      },
+    })
+      .populate({
+        path: "userID",
+        select: "fullname age address phoneNumber email",
+      })
+      .sort({ payPeriod: 1 }); // Sắp xếp theo ngày lương tăng dần
+
+    if (payRolls.length === 0) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: `Không tìm thấy bảng lương nào trong năm ${year} của nhân viên có ID ${userId}.`,
+      });
+    }
+
+    // Trả về danh sách lương
+    return res.status(200).json({
+      status: 200,
+      data: payRolls,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetPayRollByYearAndUserID:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 module.exports = {
   GetAllPayRolls,
   GetPayRollByID,
   UpdatePayRoll,
   CreatePayRoll,
   DeletePayRoll,
-  CheckPayRollByEmployeeAndPayPeriod
+  CheckPayRollByEmployeeAndPayPeriod,
+  GetPayRollByPeriod,
+  GetPayRollByYearAndUserID,
 };

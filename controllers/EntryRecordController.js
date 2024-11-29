@@ -644,7 +644,7 @@ const CreateEntryRecord = async (req, res) => {
       });
     }
     const user = await User.findById(usersID).select(
-      "fullname age address phoneNumber"
+      "fullname birthDay address phoneNumber"
     );
     // console.log("user", user);
 

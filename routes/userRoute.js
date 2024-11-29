@@ -15,6 +15,7 @@ router.patch("/GetAllUsers", UserController.GetAllUsersNonDelete);
 // http://localhost:3000/api/v1/users/UpdateUser
 router.put("/UpdateUser", UserController.UpdateUser);
 router.delete("/DeleteUsers", UserController.DeleteUsers);
+router.patch("/GetUserByRFIDCard", UserController.GetUserByRFIDCard);
 
 // API
 module.exports = router;

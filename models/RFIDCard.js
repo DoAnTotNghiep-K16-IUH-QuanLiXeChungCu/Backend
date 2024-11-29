@@ -13,10 +13,6 @@ const rfidCardSchema = new Schema(
       type: Date,
       default: Date.now,
     },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
   },
   {
     collection: "rfid_cards",

@@ -32,4 +32,14 @@ router.patch(
   middleware.verifyToken,
   payRollcontroller.CheckPayRollByEmployeeAndPayPeriod
 );
+router.patch(
+  "/GetPayRollByPeriod",
+  middleware.verifyToken,
+  payRollcontroller.GetPayRollByPeriod
+);
+router.patch(
+  "/GetPayRollByYearAndUserID",
+  middleware.verifyToken,
+  payRollcontroller.GetPayRollByYearAndUserID
+);
 module.exports = router;
