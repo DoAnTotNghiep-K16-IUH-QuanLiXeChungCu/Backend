@@ -37,6 +37,10 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    rfidCard: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "RFIDCard",
+    },
     isDelete: {
       type: Boolean,
       default: false,

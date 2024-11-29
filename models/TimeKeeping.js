@@ -22,6 +22,7 @@ const timeKeepingSchema = new Schema(
     },
     checkOut: {
       type: Date,
+      default: null,
     },
     hoursWorked: {
       type: Number,

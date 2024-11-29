@@ -3,7 +3,7 @@ const TimeKeepingController = require("../controllers/TimeKeepingController");
 const middleware = require("../middleware/middlewareController");
 const router = Router();
 
-// http://localhost:3000/api/v1/TimeKeeping/GetAllTimeKeeping
+// http://localhost:3000/api/v1/timeKeeping/GetAllTimeKeeping
 router.patch(
   "/GetAllTimeKeeping",
   middleware.verifyToken,

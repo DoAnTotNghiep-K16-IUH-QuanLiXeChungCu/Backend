@@ -31,13 +31,7 @@ const GetAllRFIDCards = async (req, res) => {
 
     // Lấy tất cả thẻ RFID
     const totalRecords = await RFIDCard.countDocuments();
-    const rfidCards = await RFIDCard.find()
-      .populate({
-        path: "userId",
-        select: "_id fullname phoneNumber age",
-      })
-      .skip(skip)
-      .limit(parsedPageSize);
+    const rfidCards = await RFIDCard.find().skip(skip).limit(parsedPageSize);
 
     if (totalRecords === 0) {
       return res.status(404).json({
@@ -82,10 +76,7 @@ const GetRFIDCardById = async (req, res) => {
       });
     }
 
-    const rfidCard = await RFIDCard.findById(id).populate({
-      path: "userId",
-      select: "_id fullname phoneNumber age",
-    });
+    const rfidCard = await RFIDCard.findById(id);
 
     if (!rfidCard) {
       return res.status(404).json({
@@ -275,10 +266,7 @@ const GetRFIDCardByUUID = async (req, res) => {
       });
     }
     // Tìm thẻ RFID theo uuid
-    const rfidCard = await RFIDCard.findOne({ uuid }).populate({
-      path: "userId",
-      select: "_id fullname phoneNumber age",
-    });
+    const rfidCard = await RFIDCard.findOne({ uuid });
 
     if (!rfidCard) {
       return res.status(404).json({

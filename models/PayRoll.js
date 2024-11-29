@@ -49,7 +49,7 @@ const payRollSchema = new Schema(
     },
     note: {
       type: String,
-      default: "" ,
+      default: "",
     },
   },
   {
