@@ -613,7 +613,11 @@ const CreateEntryRecord = async (req, res) => {
       rfidId,
     } = req.body;
 
-    const entryTime = new Date();
+    const currenTime = new Date();
+    const entryTime = new Date(
+      currenTime.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" })
+    ).toISOString();
+
     let isResident = req.body.isResident;
 
     // Kiểm tra tính hợp lệ của licensePlate
@@ -893,6 +897,20 @@ const FilterEntryRecords = async (req, res) => {
           as: "exitRecord",
         },
       },
+      {
+        $lookup: {
+          from: "parking_transactions", // Tên collection của ParkingTransaction
+          localField: "exitRecord.parkingTransactionID",
+          foreignField: "_id",
+          as: "parkingTransaction",
+        },
+      },
+      {
+        $unwind: {
+          path: "$parkingTransaction",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
       { $unwind: { path: "$exitRecord", preserveNullAndEmptyArrays: true } },
       {
         $addFields: {
@@ -932,6 +950,7 @@ const FilterEntryRecords = async (req, res) => {
                 isResident: "$exitRecord.isResident",
                 vehicleType: "$exitRecord.vehicleType",
                 isDelete: "$exitRecord.isDelete",
+                totalFee: "$parkingTransaction.totalFee",
               },
             },
           },
@@ -1100,7 +1119,69 @@ const GetEntryRecordByisOutAndUuidAndLicensePlate = async (req, res) => {
     });
   }
 };
+const GetEntryRecordByisOutAndLicensePlate = async (req, res) => {
+  try {
+    const { isOut, licensePlate } = req.body;
 
+    // Validate request fields
+    if (typeof isOut !== "boolean" || !licensePlate) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu trường isOut, uuid hoặc licensePlate trong body request.",
+      });
+    }
+    // Use the rfidCard._id to find the EntryRecord
+    const entryRecord = await EntryRecord.findOne({
+      isOut,
+      licensePlate,
+    })
+      .populate({
+        path: "usersID",
+        model: "User",
+        select: "fullname age address phoneNumber", // Liên kết với bảng User
+      })
+      .populate({
+        path: "rfidId",
+        model: "RFIDCard",
+        select: "uuid",
+      });
+
+    // Check if the entry record was found
+    if (!entryRecord) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy bản ghi EntryRecord với các điều kiện cung cấp.",
+      });
+    }
+
+    // Add URL prefixes to pictures if available
+    entryRecord.picture_front = entryRecord.picture_front
+      ? `${process.env.MINIO_SERVER_URL}${entryRecord.picture_front}`
+      : "";
+    entryRecord.picture_back = entryRecord.picture_back
+      ? `${process.env.MINIO_SERVER_URL}${entryRecord.picture_back}`
+      : "";
+
+    // Send response with the populated entry record
+    return res.status(200).json({
+      status: 200,
+      data: entryRecord,
+      error: null,
+    });
+  } catch (error) {
+    console.error(
+      `Lỗi trong GetEntryRecordByisOutAndLicensePlate từ EntryRecord:`,
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 module.exports = {
   GetAllEntryRecords,
   GetEntryRecordById,
@@ -1112,4 +1193,5 @@ module.exports = {
   CountVehicleNonExit,
   FilterEntryRecords,
   GetEntryRecordByisOutAndUuidAndLicensePlate,
+  GetEntryRecordByisOutAndLicensePlate,
 };

@@ -69,5 +69,11 @@ router.patch(
   EntryRecordController.GetEntryRecordByisOutAndUuidAndLicensePlate
 );
 
+router.patch(
+  "/GetEntryRecordByisOutAndLicensePlate",
+  middleware.verifyToken,
+  EntryRecordController.GetEntryRecordByisOutAndLicensePlate
+);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

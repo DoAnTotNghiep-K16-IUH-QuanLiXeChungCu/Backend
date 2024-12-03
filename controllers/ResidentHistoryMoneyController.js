@@ -1,4 +1,3 @@
-const Customer = require("../models/Customer");
 const ResidentHistoryMoney = require("../models/ResidentHistoryMoney");
 const Vehicle = require("../models/Vehicle");
 const ParkingSlot = require("../models/ParkingSlot");
@@ -978,6 +977,120 @@ const CheckResidentHistoryMoneys = async (req, res) => {
   }
 };
 
+const GetResidentHistoryMoneysLatesbyRFIDCard = async (req, res) => {
+  try {
+    const { uuid } = req.body;
+
+    const rFIDCard = await RFIDCard.findOne({ uuid: uuid });
+    // Kiểm tra tính hợp lệ của rFIDCardID và licensePlate
+    if (!rFIDCard) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: `Không tìm thấy thẻ có uuid ${uuid}`,
+      });
+    }
+    const rFIDCardID = rFIDCard._id.toString();
+    const residentHistoryMoney = await ResidentHistoryMoney.findOne({
+      rFIDCardID: rFIDCardID,
+      isDelete: false,
+    }).sort({ endDate: -1 }); // Sắp xếp theo endDate giảm dần, lấy bản ghi mới nhất
+
+    if (!residentHistoryMoney) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy bản ghi ResidentHistoryMoney phù hợp.",
+      });
+    }
+    return res.status(200).json({
+      status: 200,
+      data: residentHistoryMoney,
+      error: null,
+    });
+  } catch (error) {
+    console.error(
+      "Lỗi không xác định trong CheckResidentHistoryMoneys:",
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+const GetResidentHistoryMoneysLicensePlate = async (req, res) => {
+  try {
+    const { licensePlate } = req.body;
+    if (!licensePlate || typeof licensePlate !== "string") {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "licensePlate không hợp lệ.",
+      });
+    }
+    // Tìm xe với biển số cung cấp
+    const vehicle = await Vehicle.findOne({
+      licensePlate: licensePlate,
+      isDelete: false,
+    });
+
+    if (!vehicle) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: `Không tìm thấy xe với biển số ${licensePlate} cung cấp.`,
+      });
+    }
+
+    // Tìm bản ghi ResidentHistoryMoney mới nhất khớp với rFIDCardID và vehicleId
+    const residentHistoryMoney = await ResidentHistoryMoney.findOne({
+      vehicleId: vehicle._id,
+      isDelete: false,
+    })
+      .populate({
+        path: "vehicleId", // Populate trường vehicleId
+        model: "Vehicle", // Tên model liên quan
+        select: "customerId licensePlate type brand", // Chỉ lấy các trường cần thiết trong Vehicle
+        populate: {
+          path: "customerId", // Populate tiếp trường customerId bên trong vehicleId
+          model: "Customer", // Tên model liên quan
+          select: "fullName isResident apartmentsId",
+          populate: {
+            path: "apartmentsId",
+            model: "Apartment",
+            select: "name",
+          },
+        },
+      })
+      .sort({ endDate: -1 }); // Sắp xếp theo endDate giảm dần, lấy bản ghi mới nhất
+
+    if (!residentHistoryMoney) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy bản ghi ResidentHistoryMoney phù hợp.",
+      });
+    }
+    // Trả về bản ghi ResidentHistoryMoney nếu còn hạn
+    return res.status(200).json({
+      status: 200,
+      data: residentHistoryMoney,
+      error: null,
+    });
+  } catch (error) {
+    console.error(
+      "Lỗi không xác định trong CheckResidentHistoryMoneys:",
+      error
+    );
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 module.exports = {
   GetAllResidentHistoryMoneys,
   CreateResidentHistoryMoney,
@@ -988,4 +1101,6 @@ module.exports = {
   GetYearlyStatistics,
   FilterResidentHistoryMoneys,
   CheckResidentHistoryMoneys,
+  GetResidentHistoryMoneysLatesbyRFIDCard,
+  GetResidentHistoryMoneysLicensePlate,
 };

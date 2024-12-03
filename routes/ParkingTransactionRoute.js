@@ -48,5 +48,10 @@ router.put(
   middleware.verifyToken,
   ParkingTransactionController.getParkingTransactionPerYear
 );
+router.patch(
+  "/EstimateParkingTransaction",
+  middleware.verifyToken,
+  ParkingTransactionController.estimateParkingTransaction
+);
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

@@ -1,10 +1,10 @@
 const ExitRecord = require("../models/ExitRecord");
 const EntryRecord = require("../models/EntryRecord");
-const ParkingRate = require("../models/ParkingRate");
 const VisitorHistoryMoney = require("../models/VisitorHistoryMoney");
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
 const mongoose = require("mongoose");
+const ParkingTransaction = require("../models/ParkingTransaction");
 
 const GetAllExitRecords = async (req, res) => {
   try {
@@ -595,7 +595,10 @@ const CreateExitRecord = async (req, res) => {
     } = req.body;
 
     // exitTime sẽ là thời gian hiện tại
-    const exitTime = new Date();
+    const currenTime = new Date(); // Lấy thời gian hiện tại
+    const exitTime = currenTime.toLocaleString("en-US", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
 
     // Kiểm tra hợp lệ cho entry_recordId
     if (!entry_recordId || !mongoose.Types.ObjectId.isValid(entry_recordId)) {
@@ -661,30 +664,113 @@ const CreateExitRecord = async (req, res) => {
         error: "picture_back phải là một chuỗi.",
       });
     }
-
-    // Hàm cắt URL, giữ lại đường dẫn tương đối
     const extractRelativePath = (url) => {
       const serverUrl = process.env.MINIO_SERVER_URL; // Lấy URL server từ biến môi trường
       return url.replace(serverUrl, ""); // Loại bỏ URL của MinIO, chỉ giữ lại phần đường dẫn
     };
-
     const relativePictureFront = extractRelativePath(picture_front);
     const relativePictureBack = extractRelativePath(picture_back);
+    if (!isResident) {
+      const entryDateTime = new Date(entryRecord.entryTime).toLocaleString(
+        "en-US",
+        {
+          timeZone: "Asia/Ho_Chi_Minh",
+        }
+      );
+      const exitDateTime = new Date(exitTime).toLocaleString("en-US", {
+        timeZone: "Asia/Ho_Chi_Minh",
+      });
+      if (entryDateTime >= exitDateTime) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "Thời gian vào phải trước thời gian ra.",
+        });
+      }
 
-    // // Tính thời gian đỗ xe
-    // const duration = Math.abs(
-    //   new Date(exitTime) - new Date(entryRecord.entryTime)
-    // );
-    // const hoursParked = Math.ceil(duration / (1000 * 60 * 60)); // Làm tròn lên theo giờ
+      // Tìm mức giá cho loại phương tiện này
+      const rate = await ParkingRate.findOne({
+        vehicleType,
+        status: "in_using",
+      });
+      if (!rate) {
+        return res.status(404).json({
+          status: 404,
+          data: null,
+          error: "Không tìm thấy mức giá cho loại phương tiện này.",
+        });
+      }
 
-    // let parkingFee = 0;
+      // Tính toán thời gian gửi xe
+      const timeParking = exitDateTime - entryDateTime; // Thời gian lưu trữ tính bằng milliseconds
+      const hours = timeParking / (1000 * 60 * 60);
+      const days = timeParking / (1000 * 60 * 60 * 24);
+      const weeks = timeParking / (1000 * 60 * 60 * 24 * 7);
+      const months = timeParking / (1000 * 60 * 60 * 24 * 30);
+      const years = timeParking / (1000 * 60 * 60 * 24 * 365);
 
-    // Nếu không phải cư dân, tính phí đỗ xe
-    // if (!isResident) {
-    //   parkingFee = await calculateParkingFee(vehicleType, hoursParked);
-    // }
+      let totalFee = 0;
 
-    // Tạo bản ghi ExitRecord mới
+      // Tính toán phí gửi xe dựa trên thời gian gửi
+      if (hours <= 24) {
+        const entryHour = entryDateTime.getHours();
+        const exitHour = exitDateTime.getHours();
+
+        // Giả sử ban đêm từ 22:00 đến 6:00
+        if (
+          (entryHour >= 22 || entryHour < 6) &&
+          (exitHour >= 22 || exitHour < 6)
+        ) {
+          totalFee = rate.overnight_rate;
+        } else {
+          const preciseHours =
+            (exitDateTime - entryDateTime) / (1000 * 60 * 60); // Tổng số giờ
+          totalFee = Math.ceil(preciseHours) * rate.hourly_rate;
+        }
+      } else if (days <= 7) {
+        totalFee = Math.ceil(days) * rate.daily_rate;
+      } else if (weeks <= 4) {
+        totalFee = Math.ceil(weeks) * rate.weekly_rate;
+      } else if (months <= 12) {
+        totalFee = Math.ceil(months) * rate.monthly_rate;
+      } else {
+        totalFee = Math.ceil(years) * rate.yearly_rate;
+      }
+
+      // Tạo bản ghi giao dịch gửi xe mới
+      const newTransaction = new ParkingTransaction({
+        vehicleType,
+        licensePlate,
+        entryTime: entryDateTime,
+        exitTime: exitDateTime,
+        totalFee,
+      });
+      // Lưu bản ghi
+
+      const newTrans = await newTransaction.save();
+      const parkingTransactionID = newTrans._id.toString();
+      const newExitRecord = new ExitRecord({
+        entry_recordId,
+        exitTime,
+        picture_front: relativePictureFront, // Lưu phần đường dẫn tương đối
+        picture_back: relativePictureBack, // Lưu phần đường dẫn tương đối
+        licensePlate,
+        isResident,
+        vehicleType,
+        parkingTransactionID,
+      });
+      await newExitRecord.save();
+      entryRecord.isOut = true;
+      await entryRecord.save();
+
+      // Nếu không phải cư dân, lưu phí đỗ xe vào VisitorHistoryMoney
+
+      return res.status(201).json({
+        status: 201,
+        data: newExitRecord,
+        error: null,
+      });
+    }
     const newExitRecord = new ExitRecord({
       entry_recordId,
       exitTime,
@@ -694,42 +780,9 @@ const CreateExitRecord = async (req, res) => {
       isResident,
       vehicleType,
     });
-
-    // Lưu bản ghi vào cơ sở dữ liệu
     await newExitRecord.save();
-
-    // Cập nhật isOut của EntryRecord thành true
     entryRecord.isOut = true;
     await entryRecord.save();
-
-    // Nếu không phải cư dân, lưu phí đỗ xe vào VisitorHistoryMoney
-    if (!isResident) {
-      const newVisitorHistoryMoney = new VisitorHistoryMoney({
-        exit_recordId: newExitRecord._id,
-        licensePlate,
-        dateTime: exitTime,
-        hourly: hoursParked,
-        vehicleType,
-        // parkingFee,
-      });
-
-      await newVisitorHistoryMoney.save();
-
-      // Trả về phản hồi với thông tin về thời gian đỗ xe và phí đỗ xe
-      return res.status(201).json({
-        status: 201,
-        data: {
-          newExitRecord,
-          // parkingDetails: {
-          //   hoursParked,
-          //   parkingFee,
-          // },
-        },
-        error: null,
-      });
-    }
-
-    // Trả về phản hồi thành công cho cư dân (không tính phí đỗ xe)
     return res.status(201).json({
       status: 201,
       data: newExitRecord,
