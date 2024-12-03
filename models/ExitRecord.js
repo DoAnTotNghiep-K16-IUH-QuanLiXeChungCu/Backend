@@ -37,6 +37,10 @@ const exitRecordSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    parkingTransactionID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ParkingTransaction",
+    },
   },
   {
     collection: "exit_records",

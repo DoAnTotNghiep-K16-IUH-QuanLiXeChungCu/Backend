@@ -1,5 +1,4 @@
 const ParkingTransaction = require("../models/ParkingTransaction");
-const Vehicle = require("../models/Vehicle");
 const ParkingRate = require("../models/ParkingRate");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
@@ -435,6 +434,87 @@ const getParkingTransactionPerYear = async (req, res) => {
   }
 };
 
+const estimateParkingTransaction = async (req, res) => {
+  try {
+    const { licensePlate, vehicleType, entryTime, exitTime } = req.body;
+
+    if (!licensePlate || !vehicleType || !entryTime || !exitTime) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu thông tin bắt buộc.",
+      });
+    }
+
+    const entryDateTime = new Date(entryTime);
+    const exitDateTime = new Date(exitTime);
+
+    if (entryDateTime >= exitDateTime) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thời gian vào phải trước thời gian ra.",
+      });
+    }
+
+    // Tìm mức giá cho loại phương tiện này
+    const rate = await ParkingRate.findOne({ vehicleType, status: "in_using" });
+    if (!rate) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy mức giá cho loại phương tiện này.",
+      });
+    }
+
+    // Tính toán thời gian gửi xe
+    const timeParking = exitDateTime - entryDateTime; // Thời gian lưu trữ tính bằng milliseconds
+    const hours = timeParking / (1000 * 60 * 60);
+    const days = timeParking / (1000 * 60 * 60 * 24);
+    const weeks = timeParking / (1000 * 60 * 60 * 24 * 7);
+    const months = timeParking / (1000 * 60 * 60 * 24 * 30);
+    const years = timeParking / (1000 * 60 * 60 * 24 * 365);
+
+    let totalFee = 0;
+
+    // Tính toán phí gửi xe dựa trên thời gian gửi
+    if (hours <= 24) {
+      const entryHour = entryDateTime.getHours();
+      const exitHour = exitDateTime.getHours();
+
+      // Giả sử ban đêm từ 22:00 đến 6:00
+      if (
+        (entryHour >= 22 || entryHour < 6) &&
+        (exitHour >= 22 || exitHour < 6)
+      ) {
+        totalFee = rate.overnight_rate;
+      } else {
+        const preciseHours = (exitDateTime - entryDateTime) / (1000 * 60 * 60); // Tổng số giờ
+        totalFee = Math.ceil(preciseHours) * rate.hourly_rate;
+      }
+    } else if (days <= 7) {
+      totalFee = Math.ceil(days) * rate.daily_rate;
+    } else if (weeks <= 4) {
+      totalFee = Math.ceil(weeks) * rate.weekly_rate;
+    } else if (months <= 12) {
+      totalFee = Math.ceil(months) * rate.monthly_rate;
+    } else {
+      totalFee = Math.ceil(years) * rate.yearly_rate;
+    }
+    return res.status(201).json({
+      status: 201,
+      data: totalFee,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong estimateParkingTransaction:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 module.exports = {
   getAllParkingTransaction,
   getParkingTransactionByID,
@@ -445,4 +525,5 @@ module.exports = {
   getParkingTransactionToday,
   getParkingTransactionPerMonth,
   getParkingTransactionPerYear,
+  estimateParkingTransaction,
 };
