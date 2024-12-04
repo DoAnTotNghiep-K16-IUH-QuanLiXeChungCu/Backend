@@ -82,5 +82,19 @@ router.patch(
   EntryRecordController.GetVehicleStatsForToday
 );
 
+// http://localhost:3000/api/v1/entryRecord/GetNumBerVehicleInMonth
+router.patch(
+  "/GetNumBerVehicleInMonth",
+  middleware.verifyToken,
+  EntryRecordController.GetNumBerVehicleInMonth
+);
+
+// http://localhost:3000/api/v1/entryRecord/GetVehicleStatsForToday
+router.patch(
+  "/GetVehicleStatsForToday",
+  middleware.verifyToken,
+  EntryRecordController.GetVehicleStatsForToday
+);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

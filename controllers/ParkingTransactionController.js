@@ -515,6 +515,172 @@ const estimateParkingTransaction = async (req, res) => {
     });
   }
 };
+
+const GetTotalFeesForCurrentAndPreviousMonth = async (req, res) => {
+  try {
+    // Lấy tháng và năm từ query parameters
+    const { month, year } = req.body;
+
+    // Kiểm tra xem tháng và năm có hợp lệ không
+    if (!month || !year) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu tháng hoặc năm. Vui lòng cung cấp đầy đủ tháng và năm."
+      });
+    }
+
+    const parsedMonth = parseInt(month, 10);
+    const parsedYear = parseInt(year, 10);
+
+    // Kiểm tra tháng hợp lệ (1-12)
+    if (isNaN(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Tháng không hợp lệ. Tháng phải trong khoảng từ 1 đến 12."
+      });
+    }
+
+    // Kiểm tra năm hợp lệ (năm phải là số nguyên dương)
+    if (isNaN(parsedYear) || parsedYear <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Năm không hợp lệ. Vui lòng nhập năm hợp lệ."
+      });
+    }
+
+    // Chuyển tháng từ 1-12 thành 0-11 để phù hợp với JS
+    const currentMonth = parsedMonth - 1;
+    const currentYear = parsedYear;
+
+    // Tính ngày đầu và ngày cuối của tháng hiện tại
+    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+    const endOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59, 999);
+
+    // Tính ngày đầu và ngày cuối của tháng trước
+    const startOfPreviousMonth = new Date(currentYear, currentMonth - 1, 1);
+    const endOfPreviousMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+
+    // Lấy tổng tiền của xe ô tô và xe mô tô trong tháng hiện tại và tháng trước
+    const totalFeesCurrentMonth = await ParkingTransaction.aggregate([
+      {
+        $match: {
+          entryTime: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }
+        }
+      },
+      {
+        $group: {
+          _id: "$vehicleType", // Nhóm theo loại xe
+          totalFee: { $sum: "$totalFee" } // Tính tổng phí
+        }
+      }
+    ]);
+
+    const totalFeesPreviousMonth = await ParkingTransaction.aggregate([
+      {
+        $match: {
+          entryTime: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth }
+        }
+      },
+      {
+        $group: {
+          _id: "$vehicleType", // Nhóm theo loại xe
+          totalFee: { $sum: "$totalFee" } // Tính tổng phí
+        }
+      }
+    ]);
+
+    // Chuẩn hóa dữ liệu, đảm bảo cả hai loại xe đều có mặt
+    const normalizeData = (data) => {
+      const types = ["car", "motor"]; // Các loại xe cần đảm bảo
+      const normalized = types.map((type) => {
+        const found = data.find((item) => item._id === type);
+        return { type, totalFee: found ? found.totalFee : 0 };
+      });
+      return normalized;
+    };
+
+    const normalizedCurrentMonth = normalizeData(totalFeesCurrentMonth);
+    const normalizedPreviousMonth = normalizeData(totalFeesPreviousMonth);
+
+    // Kết quả trả về
+    return res.status(200).json({
+      status: 200,
+      data: {
+        currentMonth: normalizedCurrentMonth,
+        previousMonth: normalizedPreviousMonth
+      },
+      error: null
+    });
+  } catch (error) {
+    console.error("Lỗi trong getTotalFeesForCurrentAndPreviousMonth:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định."
+    });
+  }
+};
+
+const GetTotalFeesForToday = async (req, res) => {
+  try {
+    // Lấy ngày hiện tại
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear(); // Năm hiện tại
+    const currentMonth = currentDate.getMonth(); // Tháng hiện tại (0-11)
+    const currentDay = currentDate.getDate(); // Ngày hiện tại (1-31)
+
+    // Tạo khoảng thời gian cho ngày hôm nay: từ 00:00:00 đến 23:59:59
+    const startOfToday = new Date(currentYear, currentMonth, currentDay, 0, 0, 0); // Bắt đầu từ 00:00:00
+    const endOfToday = new Date(currentYear, currentMonth, currentDay, 23, 59, 59, 999); // Kết thúc lúc 23:59:59
+
+    // Lấy tổng tiền của xe ô tô và xe mô tô trong ngày hôm nay
+    const totalFeesToday = await ParkingTransaction.aggregate([
+      {
+        $match: {
+          entryTime: { $gte: startOfToday, $lte: endOfToday } // Lọc theo ngày hôm nay
+        }
+      },
+      {
+        $group: {
+          _id: "$vehicleType", // Nhóm theo loại xe
+          totalFee: { $sum: "$totalFee" } // Tính tổng phí
+        }
+      }
+    ]);
+
+    // Chuẩn hóa dữ liệu, đảm bảo cả hai loại xe đều có mặt
+    const normalizeData = (data) => {
+      const types = ["car", "motor"]; // Các loại xe cần đảm bảo
+      const normalized = types.map((type) => {
+        const found = data.find((item) => item._id === type);
+        return { type, totalFee: found ? found.totalFee : 0 };
+      });
+      return normalized;
+    };
+
+    const normalizedToday = normalizeData(totalFeesToday);
+
+    // Kết quả trả về
+    return res.status(200).json({
+      status: 200,
+      data: {
+        today: normalizedToday
+      },
+      error: null
+    });
+  } catch (error) {
+    console.error("Lỗi trong getTotalFeesForToday:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định."
+    });
+  }
+};
+
 module.exports = {
   getAllParkingTransaction,
   getParkingTransactionByID,
@@ -526,4 +692,6 @@ module.exports = {
   getParkingTransactionPerMonth,
   getParkingTransactionPerYear,
   estimateParkingTransaction,
+  GetTotalFeesForCurrentAndPreviousMonth,
+  GetTotalFeesForToday
 };

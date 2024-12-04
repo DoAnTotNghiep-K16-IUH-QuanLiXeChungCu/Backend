@@ -54,6 +54,11 @@ router.patch(
   ParkingTransactionController.estimateParkingTransaction
 );
 router.patch(
+  "/getTotalFeesForCurrentAndPreviousMonth",
+  middleware.verifyToken,
+  ParkingTransactionController.GetTotalFeesForCurrentAndPreviousMonth
+);
+router.patch(
   "/GetTotalFeesForToday",
   middleware.verifyToken,
   ParkingTransactionController.GetTotalFeesForToday

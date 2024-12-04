@@ -75,5 +75,17 @@ router.patch(
   middleware.verifyToken,
   ResidentHistoryMoneyController.GetResidentHistoryMoneysLicensePlate
 );
+router.patch(
+  "/GetTotalFeesForCurrentAndPreviousMonth",
+  middleware.verifyToken,
+  ResidentHistoryMoneyController.GetTotalFeesForCurrentAndPreviousMonth
+);
+router.patch(
+  "/GetTotalFeesForToday",
+  middleware.verifyToken,
+  ResidentHistoryMoneyController.GetTotalFeesForToday
+);
 // Đảm bảo bạn export router đúng cách
 module.exports = router;
+
+
