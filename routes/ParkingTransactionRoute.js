@@ -53,5 +53,10 @@ router.patch(
   middleware.verifyToken,
   ParkingTransactionController.estimateParkingTransaction
 );
+router.patch(
+  "/GetTotalFeesForToday",
+  middleware.verifyToken,
+  ParkingTransactionController.GetTotalFeesForToday
+);
 // Đảm bảo bạn export router đúng cách
 module.exports = router;

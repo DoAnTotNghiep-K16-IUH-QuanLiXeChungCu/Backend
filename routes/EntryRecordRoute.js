@@ -75,5 +75,12 @@ router.patch(
   EntryRecordController.GetEntryRecordByisOutAndLicensePlate
 );
 
+// http://localhost:3000/api/v1/entryRecord/GetVehicleStatsForToday
+router.patch(
+  "/GetVehicleStatsForToday",
+  middleware.verifyToken,
+  EntryRecordController.GetVehicleStatsForToday
+);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router;
