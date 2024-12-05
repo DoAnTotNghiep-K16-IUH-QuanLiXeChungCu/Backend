@@ -1091,6 +1091,216 @@ const GetResidentHistoryMoneysLicensePlate = async (req, res) => {
     });
   }
 };
+
+
+const GetTotalFeesForCurrentAndPreviousMonth = async (req, res) => {
+  try {
+    // Lấy tháng và năm từ query parameters
+    const { month, year } = req.body;
+
+    // Kiểm tra xem tháng và năm có hợp lệ không
+    if (!month || !year) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu tháng hoặc năm. Vui lòng cung cấp đầy đủ tháng và năm."
+      });
+    }
+
+    const parsedMonth = parseInt(month, 10);
+    const parsedYear = parseInt(year, 10);
+
+    // Kiểm tra tháng hợp lệ (1-12)
+    if (isNaN(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Tháng không hợp lệ. Tháng phải trong khoảng từ 1 đến 12."
+      });
+    }
+
+    // Kiểm tra năm hợp lệ (năm phải là số nguyên dương)
+    if (isNaN(parsedYear) || parsedYear <= 0) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Năm không hợp lệ. Vui lòng nhập năm hợp lệ."
+      });
+    }
+
+    const currentMonth = parsedMonth - 1; // JS months are 0-based
+    const currentYear = parsedYear;
+
+    // Tính ngày đầu và ngày cuối của tháng hiện tại
+    const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+    const endOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59, 999);
+
+    // Tính ngày đầu và ngày cuối của tháng trước
+    const startOfPreviousMonth = new Date(currentYear, currentMonth - 1, 1);
+    const endOfPreviousMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+
+    // Lấy danh sách các loại xe (car, motor)
+    const vehicleTypes = ["car", "motor"];
+
+    // Lấy danh sách vehicles (cả các xe đã bị xóa đều không được tính)
+    const vehicles = await Vehicle.find({ type: { $in: vehicleTypes }, isDelete: false });
+
+    // Tạo đối tượng map để lưu tổng phí theo từng loại xe
+    const totalFeesCurrentMonth = vehicleTypes.map((type) => ({
+      type,
+      totalFee: 0,
+    }));
+
+    const totalFeesPreviousMonth = vehicleTypes.map((type) => ({
+      type,
+      totalFee: 0,
+    }));
+
+    // Lấy tổng phí trong tháng hiện tại
+    const feesCurrentMonth = await ResidentHistoryMoney.aggregate([
+      {
+        $match: {
+          startDate: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth },
+          isDelete: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$vehicleId",
+          totalFee: { $sum: "$monthlyFee" },
+        },
+      },
+    ]);
+
+    // Cập nhật tổng phí vào mảng totalFeesCurrentMonth
+    for (const item of feesCurrentMonth) {
+      const vehicle = await Vehicle.findById(item._id);
+      if (vehicle) {
+        const vehicleType = vehicle.type;
+        const index = totalFeesCurrentMonth.findIndex((fee) => fee.type === vehicleType);
+        if (index !== -1) {
+          totalFeesCurrentMonth[index].totalFee += item.totalFee;
+        }
+      }
+    }
+
+    // Lấy tổng phí trong tháng trước
+    const feesPreviousMonth = await ResidentHistoryMoney.aggregate([
+      {
+        $match: {
+          startDate: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth },
+          isDelete: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$vehicleId",
+          totalFee: { $sum: "$monthlyFee" },
+        },
+      },
+    ]);
+
+    // Cập nhật tổng phí vào mảng totalFeesPreviousMonth
+    for (const item of feesPreviousMonth) {
+      const vehicle = await Vehicle.findById(item._id);
+      if (vehicle) {
+        const vehicleType = vehicle.type;
+        const index = totalFeesPreviousMonth.findIndex((fee) => fee.type === vehicleType);
+        if (index !== -1) {
+          totalFeesPreviousMonth[index].totalFee += item.totalFee;
+        }
+      }
+    }
+
+    // Kết quả trả về
+    return res.status(200).json({
+      status: 200,
+      data: {
+        currentMonth: totalFeesCurrentMonth,
+        previousMonth: totalFeesPreviousMonth,
+      },
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong getTotalFeesForCurrentAndPreviousMonth:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+
+const GetTotalFeesForToday = async (req, res) => {
+  try {
+    // Lấy ngày hiện tại
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear(); // Năm hiện tại
+    const currentMonth = currentDate.getMonth(); // Tháng hiện tại (0-11)
+    const currentDay = currentDate.getDate(); // Ngày hiện tại (1-31)
+
+    // Tạo khoảng thời gian cho ngày hôm nay: từ 00:00:00 đến 23:59:59
+    const startOfToday = new Date(currentYear, currentMonth, currentDay, 0, 0, 0); // Bắt đầu từ 00:00:00
+    const endOfToday = new Date(currentYear, currentMonth, currentDay, 23, 59, 59, 999); // Kết thúc lúc 23:59:59
+
+    // Lấy danh sách các loại xe (car, motor)
+    const vehicleTypes = ["car", "motor"];
+
+    // Lấy danh sách vehicles (cả các xe đã bị xóa đều không được tính)
+    const vehicles = await Vehicle.find({ type: { $in: vehicleTypes }, isDelete: false });
+
+    // Tạo đối tượng map để lưu tổng phí theo từng loại xe
+    const totalFeesToday = vehicleTypes.map((type) => ({
+      type,
+      totalFee: 0,
+    }));
+
+    // Lấy tổng phí trong ngày hôm nay
+    const feesToday = await ResidentHistoryMoney.aggregate([
+      {
+        $match: {
+          startDate: { $gte: startOfToday, $lte: endOfToday },
+          isDelete: false,
+        },
+      },
+      {
+        $group: {
+          _id: "$vehicleId",
+          totalFee: { $sum: "$monthlyFee" },
+        },
+      },
+    ]);
+
+    // Cập nhật tổng phí vào mảng totalFeesToday
+    for (const item of feesToday) {
+      const vehicle = await Vehicle.findById(item._id);
+      if (vehicle) {
+        const vehicleType = vehicle.type;
+        const index = totalFeesToday.findIndex((fee) => fee.type === vehicleType);
+        if (index !== -1) {
+          totalFeesToday[index].totalFee += item.totalFee;
+        }
+      }
+    }
+
+    // Kết quả trả về
+    return res.status(200).json({
+      status: 200,
+      data: {
+        today: totalFeesToday,
+      },
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong GetTotalFeesForToday:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+
 module.exports = {
   GetAllResidentHistoryMoneys,
   CreateResidentHistoryMoney,
@@ -1103,4 +1313,6 @@ module.exports = {
   CheckResidentHistoryMoneys,
   GetResidentHistoryMoneysLatesbyRFIDCard,
   GetResidentHistoryMoneysLicensePlate,
+  GetTotalFeesForCurrentAndPreviousMonth,
+  GetTotalFeesForToday
 };

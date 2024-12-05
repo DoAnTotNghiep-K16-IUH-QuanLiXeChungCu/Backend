@@ -1182,6 +1182,249 @@ const GetEntryRecordByisOutAndLicensePlate = async (req, res) => {
     });
   }
 };
+
+const GetNumBerVehicleInMonth = async (req, res) => {
+  try {
+    const { month, year } = req.body;
+
+    if (!month || !year) {
+      return res.status(400).json({ error: "Tháng và năm là bắt buộc." });
+    }
+
+    // Tạo khoảng thời gian dựa trên tháng và năm
+    const startDate = new Date(year, month - 1, 1); // Ngày đầu tiên của tháng
+    const endDate = new Date(year, month, 0, 23, 59, 59); // Ngày cuối cùng của tháng
+
+    // Truy vấn database và nhóm theo isResident và vehicleType (có thể là bất kỳ phương tiện nào)
+    const stats = await EntryRecord.aggregate([
+      {
+        $match: {
+          entryTime: { $gte: startDate, $lte: endDate },
+          vehicleType: { $in: ["car", "motor"] },  // Lọc theo các loại phương tiện ô tô và xe máy
+        },
+      },
+      {
+        $group: {
+          _id: {
+            vehicleType: "$vehicleType",  // Phân nhóm theo loại phương tiện
+            isResident: "$isResident",    // Phân nhóm theo cư dân hay không
+            isOut: "$isOut",              // Phân nhóm theo trạng thái vào hoặc ra
+          },
+          totalVehicles: { $sum: 1 }, // Tổng số xe trong mỗi nhóm
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          vehicleType: "$_id.vehicleType",
+          isResident: "$_id.isResident",
+          isOut: "$_id.isOut",
+          totalVehicles: 1,
+        },
+      },
+    ]);
+
+    // Kết quả sẽ lưu tổng số xe vào và ra theo từng nhóm
+    const result = {
+      resident: {
+        carIn: 0,
+        motorIn: 0,
+        carOut: 0,
+        motorOut: 0,
+        totalIn: 0,
+        totalOut: 0,
+      },
+      nonResident: {
+        carIn: 0,
+        motorIn: 0,
+        carOut: 0,
+        motorOut: 0,
+        totalIn: 0,
+        totalOut: 0,
+      },
+      total: {
+        carIn: 0,
+        motorIn: 0,
+        carOut: 0,
+        motorOut: 0,
+        totalIn: 0,
+        totalOut: 0,
+      },
+    };
+
+    // Duyệt qua kết quả trả về từ MongoDB để tính toán
+    stats.forEach(item => {
+      const { vehicleType, isResident, isOut, totalVehicles } = item;
+
+      // Tính toán cho từng loại phương tiện và trạng thái vào/ra
+      if (isResident) {
+        if (isOut) {
+          if (vehicleType === "car") result.resident.carOut += totalVehicles;
+          else if (vehicleType === "motor") result.resident.motorOut += totalVehicles;
+        } else {
+          if (vehicleType === "car") result.resident.carIn += totalVehicles;
+          else if (vehicleType === "motor") result.resident.motorIn += totalVehicles;
+        }
+        result.resident.totalIn += isOut ? 0 : totalVehicles;
+        result.resident.totalOut += isOut ? totalVehicles : 0;
+
+      } else {
+        if (isOut) {
+          if (vehicleType === "car") result.nonResident.carOut += totalVehicles;
+          else if (vehicleType === "motor") result.nonResident.motorOut += totalVehicles;
+        } else {
+          if (vehicleType === "car") result.nonResident.carIn += totalVehicles;
+          else if (vehicleType === "motor") result.nonResident.motorIn += totalVehicles;
+        }
+        result.nonResident.totalIn += isOut ? 0 : totalVehicles;
+        result.nonResident.totalOut += isOut ? totalVehicles : 0;
+      }
+
+      // Cập nhật tổng số xe vào và ra
+      if (vehicleType === "car") {
+        if (isOut) result.total.carOut += totalVehicles;
+        else result.total.carIn += totalVehicles;
+      } else if (vehicleType === "motor") {
+        if (isOut) result.total.motorOut += totalVehicles;
+        else result.total.motorIn += totalVehicles;
+      }
+
+      result.total.totalIn += isOut ? 0 : totalVehicles;
+      result.total.totalOut += isOut ? totalVehicles : 0;
+    });
+
+    // Trả về kết quả mà không có "Chưa ra"
+    return res.status(200).json({
+      message: "Thống kê số lượng phương tiện theo loại và cư dân.",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu:", error);
+    res.status(500).json({ error: "Lỗi máy chủ." });
+  }
+};
+
+const GetVehicleStatsForToday = async (req, res) => {
+  try {
+    // Lấy ngày hiện tại
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear(); // Năm hiện tại
+    const currentMonth = currentDate.getMonth(); // Tháng hiện tại (0-11)
+    const currentDay = currentDate.getDate(); // Ngày hiện tại (1-31)
+
+    // Tạo khoảng thời gian cho ngày hôm nay: từ 00:00:00 đến 23:59:59
+    const startDate = new Date(currentYear, currentMonth, currentDay, 0, 0, 0); // Bắt đầu từ 00:00:00
+    const endDate = new Date(currentYear, currentMonth, currentDay, 23, 59, 59); // Kết thúc lúc 23:59:59
+
+    // Truy vấn database và nhóm theo isResident và vehicleType (có thể là bất kỳ phương tiện nào)
+    const stats = await EntryRecord.aggregate([
+      {
+        $match: {
+          entryTime: { $gte: startDate, $lte: endDate }, // Lọc theo khoảng thời gian trong ngày hôm nay
+          vehicleType: { $in: ["car", "motor"] },  // Lọc theo các loại phương tiện ô tô và xe máy
+        },
+      },
+      {
+        $group: {
+          _id: {
+            vehicleType: "$vehicleType",  // Phân nhóm theo loại phương tiện
+            isResident: "$isResident",    // Phân nhóm theo cư dân hay không
+            isOut: "$isOut",              // Phân nhóm theo trạng thái vào hoặc ra
+          },
+          totalVehicles: { $sum: 1 }, // Tổng số xe trong mỗi nhóm
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          vehicleType: "$_id.vehicleType",
+          isResident: "$_id.isResident",
+          isOut: "$_id.isOut",
+          totalVehicles: 1,
+        },
+      },
+    ]);
+
+    // Kết quả sẽ lưu tổng số xe vào và ra theo từng nhóm
+    const result = {
+      resident: {
+        carIn: 0,
+        motorIn: 0,
+        carOut: 0,
+        motorOut: 0,
+        totalIn: 0,
+        totalOut: 0,
+      },
+      nonResident: {
+        carIn: 0,
+        motorIn: 0,
+        carOut: 0,
+        motorOut: 0,
+        totalIn: 0,
+        totalOut: 0,
+      },
+      total: {
+        carIn: 0,
+        motorIn: 0,
+        carOut: 0,
+        motorOut: 0,
+        totalIn: 0,
+        totalOut: 0,
+      },
+    };
+
+    // Duyệt qua kết quả trả về từ MongoDB để tính toán
+    stats.forEach(item => {
+      const { vehicleType, isResident, isOut, totalVehicles } = item;
+
+      // Tính toán cho từng loại phương tiện và trạng thái vào/ra
+      if (isResident) {
+        if (isOut) {
+          if (vehicleType === "car") result.resident.carOut += totalVehicles;
+          else if (vehicleType === "motor") result.resident.motorOut += totalVehicles;
+        } else {
+          if (vehicleType === "car") result.resident.carIn += totalVehicles;
+          else if (vehicleType === "motor") result.resident.motorIn += totalVehicles;
+        }
+        result.resident.totalIn += isOut ? 0 : totalVehicles;
+        result.resident.totalOut += isOut ? totalVehicles : 0;
+
+      } else {
+        if (isOut) {
+          if (vehicleType === "car") result.nonResident.carOut += totalVehicles;
+          else if (vehicleType === "motor") result.nonResident.motorOut += totalVehicles;
+        } else {
+          if (vehicleType === "car") result.nonResident.carIn += totalVehicles;
+          else if (vehicleType === "motor") result.nonResident.motorIn += totalVehicles;
+        }
+        result.nonResident.totalIn += isOut ? 0 : totalVehicles;
+        result.nonResident.totalOut += isOut ? totalVehicles : 0;
+      }
+
+      // Cập nhật tổng số xe vào và ra
+      if (vehicleType === "car") {
+        if (isOut) result.total.carOut += totalVehicles;
+        else result.total.carIn += totalVehicles;
+      } else if (vehicleType === "motor") {
+        if (isOut) result.total.motorOut += totalVehicles;
+        else result.total.motorIn += totalVehicles;
+      }
+
+      result.total.totalIn += isOut ? 0 : totalVehicles;
+      result.total.totalOut += isOut ? totalVehicles : 0;
+    });
+
+    // Trả về kết quả cho ngày hôm nay
+    return res.status(200).json({
+      message: "Thống kê số lượng phương tiện theo loại và cư dân cho ngày hôm nay.",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu:", error);
+    res.status(500).json({ error: "Lỗi máy chủ." });
+  }
+};
+
 module.exports = {
   GetAllEntryRecords,
   GetEntryRecordById,
@@ -1194,4 +1437,6 @@ module.exports = {
   FilterEntryRecords,
   GetEntryRecordByisOutAndUuidAndLicensePlate,
   GetEntryRecordByisOutAndLicensePlate,
+  GetNumBerVehicleInMonth,
+  GetVehicleStatsForToday
 };
