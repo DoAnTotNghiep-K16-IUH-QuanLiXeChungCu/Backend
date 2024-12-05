@@ -1,6 +1,5 @@
 const ExitRecord = require("../models/ExitRecord");
 const EntryRecord = require("../models/EntryRecord");
-const VisitorHistoryMoney = require("../models/VisitorHistoryMoney");
 const { S3Client } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
 const mongoose = require("mongoose");
