@@ -466,40 +466,63 @@ const estimateParkingTransaction = async (req, res) => {
         error: "Không tìm thấy mức giá cho loại phương tiện này.",
       });
     }
-
-    // Tính toán thời gian gửi xe
-    const timeParking = exitDateTime - entryDateTime; // Thời gian lưu trữ tính bằng milliseconds
+    const timeParking = exitDateTime - entryDateTime; // Thời gian gửi xe tính bằng milliseconds
     const hours = timeParking / (1000 * 60 * 60);
     const days = timeParking / (1000 * 60 * 60 * 24);
-    const weeks = timeParking / (1000 * 60 * 60 * 24 * 7);
-    const months = timeParking / (1000 * 60 * 60 * 24 * 30);
-    const years = timeParking / (1000 * 60 * 60 * 24 * 365);
 
     let totalFee = 0;
 
-    // Tính toán phí gửi xe dựa trên thời gian gửi
+    // Hàm kiểm tra qua đêm (2:31 - 4:59)
+    const isOvernight = (entryHour, exitHour) => {
+      return (
+        (entryHour >= 2 && entryHour < 5) || (exitHour >= 2 && exitHour < 5)
+      );
+    };
+
+    // Tính phí theo giờ nếu thời gian gửi xe nhỏ hơn 1 ngày
     if (hours <= 24) {
       const entryHour = entryDateTime.getHours();
       const exitHour = exitDateTime.getHours();
 
-      // Giả sử ban đêm từ 22:00 đến 6:00
-      if (
-        (entryHour >= 22 || entryHour < 6) &&
-        (exitHour >= 22 || exitHour < 6)
-      ) {
-        totalFee = rate.overnight_rate;
-      } else {
-        const preciseHours = (exitDateTime - entryDateTime) / (1000 * 60 * 60); // Tổng số giờ
-        totalFee = Math.ceil(preciseHours) * rate.hourly_rate;
+      // Tính phí gửi xe máy
+      if (vehicleType === "motor") {
+        if (isOvernight(entryHour, exitHour)) {
+          totalFee = 30000; // Qua đêm
+        } else if (entryHour >= 17 || entryHour <= 2) {
+          totalFee = 10000; // Đồng giá từ 17:00 - 2:30
+        } else {
+          if (hours <= 2) {
+            totalFee = 6000; // 2 giờ đầu
+          } else {
+            totalFee = 6000 + Math.ceil(hours - 2) * 1000; // Sau 2 giờ
+          }
+        }
       }
-    } else if (days <= 7) {
-      totalFee = Math.ceil(days) * rate.daily_rate;
-    } else if (weeks <= 4) {
-      totalFee = Math.ceil(weeks) * rate.weekly_rate;
-    } else if (months <= 12) {
-      totalFee = Math.ceil(months) * rate.monthly_rate;
+
+      // Tính phí gửi xe hơi
+      if (vehicleType === "car") {
+        if (isOvernight(entryHour, exitHour)) {
+          totalFee = 200000; // Qua đêm
+        } else if (entryHour >= 17 || entryHour <= 2) {
+          totalFee = 40000; // Đồng giá từ 17:00 - 2:30
+        } else {
+          if (hours <= 2) {
+            totalFee = 30000; // 2 giờ đầu
+          } else {
+            totalFee = 30000 + Math.ceil(hours - 2) * 20000; // Sau 2 giờ
+          }
+        }
+      }
     } else {
-      totalFee = Math.ceil(years) * rate.yearly_rate;
+      if (days <= 7) {
+        totalFee = Math.ceil(days) * rate.daily_rate; // Phí theo ngày
+      } else if (days <= 30) {
+        totalFee = Math.ceil(days / 7) * rate.weekly_rate; // Phí theo tuần
+      } else if (days <= 365) {
+        totalFee = Math.ceil(days / 30) * rate.monthly_rate; // Phí theo tháng
+      } else {
+        totalFee = Math.ceil(days / 365) * rate.yearly_rate; // Phí theo năm
+      }
     }
     return res.status(201).json({
       status: 201,
@@ -526,7 +549,7 @@ const GetTotalFeesForCurrentAndPreviousMonth = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Thiếu tháng hoặc năm. Vui lòng cung cấp đầy đủ tháng và năm."
+        error: "Thiếu tháng hoặc năm. Vui lòng cung cấp đầy đủ tháng và năm.",
       });
     }
 
@@ -538,7 +561,7 @@ const GetTotalFeesForCurrentAndPreviousMonth = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Tháng không hợp lệ. Tháng phải trong khoảng từ 1 đến 12."
+        error: "Tháng không hợp lệ. Tháng phải trong khoảng từ 1 đến 12.",
       });
     }
 
@@ -547,7 +570,7 @@ const GetTotalFeesForCurrentAndPreviousMonth = async (req, res) => {
       return res.status(400).json({
         status: 400,
         data: null,
-        error: "Năm không hợp lệ. Vui lòng nhập năm hợp lệ."
+        error: "Năm không hợp lệ. Vui lòng nhập năm hợp lệ.",
       });
     }
 
@@ -557,39 +580,55 @@ const GetTotalFeesForCurrentAndPreviousMonth = async (req, res) => {
 
     // Tính ngày đầu và ngày cuối của tháng hiện tại
     const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
-    const endOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59, 999);
+    const endOfCurrentMonth = new Date(
+      currentYear,
+      currentMonth + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
 
     // Tính ngày đầu và ngày cuối của tháng trước
     const startOfPreviousMonth = new Date(currentYear, currentMonth - 1, 1);
-    const endOfPreviousMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999);
+    const endOfPreviousMonth = new Date(
+      currentYear,
+      currentMonth,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
 
     // Lấy tổng tiền của xe ô tô và xe mô tô trong tháng hiện tại và tháng trước
     const totalFeesCurrentMonth = await ParkingTransaction.aggregate([
       {
         $match: {
-          entryTime: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }
-        }
+          entryTime: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth },
+        },
       },
       {
         $group: {
           _id: "$vehicleType", // Nhóm theo loại xe
-          totalFee: { $sum: "$totalFee" } // Tính tổng phí
-        }
-      }
+          totalFee: { $sum: "$totalFee" }, // Tính tổng phí
+        },
+      },
     ]);
 
     const totalFeesPreviousMonth = await ParkingTransaction.aggregate([
       {
         $match: {
-          entryTime: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth }
-        }
+          entryTime: { $gte: startOfPreviousMonth, $lte: endOfPreviousMonth },
+        },
       },
       {
         $group: {
           _id: "$vehicleType", // Nhóm theo loại xe
-          totalFee: { $sum: "$totalFee" } // Tính tổng phí
-        }
-      }
+          totalFee: { $sum: "$totalFee" }, // Tính tổng phí
+        },
+      },
     ]);
 
     // Chuẩn hóa dữ liệu, đảm bảo cả hai loại xe đều có mặt
@@ -610,16 +649,16 @@ const GetTotalFeesForCurrentAndPreviousMonth = async (req, res) => {
       status: 200,
       data: {
         currentMonth: normalizedCurrentMonth,
-        previousMonth: normalizedPreviousMonth
+        previousMonth: normalizedPreviousMonth,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
     console.error("Lỗi trong getTotalFeesForCurrentAndPreviousMonth:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: "Lỗi máy chủ không xác định."
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -633,22 +672,37 @@ const GetTotalFeesForToday = async (req, res) => {
     const currentDay = currentDate.getDate(); // Ngày hiện tại (1-31)
 
     // Tạo khoảng thời gian cho ngày hôm nay: từ 00:00:00 đến 23:59:59
-    const startOfToday = new Date(currentYear, currentMonth, currentDay, 0, 0, 0); // Bắt đầu từ 00:00:00
-    const endOfToday = new Date(currentYear, currentMonth, currentDay, 23, 59, 59, 999); // Kết thúc lúc 23:59:59
+    const startOfToday = new Date(
+      currentYear,
+      currentMonth,
+      currentDay,
+      0,
+      0,
+      0
+    ); // Bắt đầu từ 00:00:00
+    const endOfToday = new Date(
+      currentYear,
+      currentMonth,
+      currentDay,
+      23,
+      59,
+      59,
+      999
+    ); // Kết thúc lúc 23:59:59
 
     // Lấy tổng tiền của xe ô tô và xe mô tô trong ngày hôm nay
     const totalFeesToday = await ParkingTransaction.aggregate([
       {
         $match: {
-          entryTime: { $gte: startOfToday, $lte: endOfToday } // Lọc theo ngày hôm nay
-        }
+          entryTime: { $gte: startOfToday, $lte: endOfToday }, // Lọc theo ngày hôm nay
+        },
       },
       {
         $group: {
           _id: "$vehicleType", // Nhóm theo loại xe
-          totalFee: { $sum: "$totalFee" } // Tính tổng phí
-        }
-      }
+          totalFee: { $sum: "$totalFee" }, // Tính tổng phí
+        },
+      },
     ]);
 
     // Chuẩn hóa dữ liệu, đảm bảo cả hai loại xe đều có mặt
@@ -667,16 +721,16 @@ const GetTotalFeesForToday = async (req, res) => {
     return res.status(200).json({
       status: 200,
       data: {
-        today: normalizedToday
+        today: normalizedToday,
       },
-      error: null
+      error: null,
     });
   } catch (error) {
     console.error("Lỗi trong getTotalFeesForToday:", error);
     return res.status(500).json({
       status: 500,
       data: null,
-      error: "Lỗi máy chủ không xác định."
+      error: "Lỗi máy chủ không xác định.",
     });
   }
 };
@@ -693,5 +747,5 @@ module.exports = {
   getParkingTransactionPerYear,
   estimateParkingTransaction,
   GetTotalFeesForCurrentAndPreviousMonth,
-  GetTotalFeesForToday
+  GetTotalFeesForToday,
 };

@@ -4,6 +4,7 @@ const { S3Client } = require("@aws-sdk/client-s3");
 const s3Client = new S3Client({ region: "your-region" });
 const mongoose = require("mongoose");
 const ParkingTransaction = require("../models/ParkingTransaction");
+const ParkingRate = require("../models/ParkingRate");
 
 const GetAllExitRecords = async (req, res) => {
   try {
@@ -670,28 +671,16 @@ const CreateExitRecord = async (req, res) => {
     const relativePictureFront = extractRelativePath(picture_front);
     const relativePictureBack = extractRelativePath(picture_back);
     if (!isResident) {
-      const entryDateTime = new Date(entryRecord.entryTime).toLocaleString(
-        "en-US",
-        {
-          timeZone: "Asia/Ho_Chi_Minh",
-        }
-      );
-      const exitDateTime = new Date(exitTime).toLocaleString("en-US", {
-        timeZone: "Asia/Ho_Chi_Minh",
-      });
-      if (entryDateTime >= exitDateTime) {
-        return res.status(400).json({
-          status: 400,
-          data: null,
-          error: "Thời gian vào phải trước thời gian ra.",
-        });
-      }
+      const entryDateTime = new Date(entryRecord.entryTime);
+      const exitDateTime = currenTime;
 
       // Tìm mức giá cho loại phương tiện này
       const rate = await ParkingRate.findOne({
         vehicleType,
         status: "in_using",
       });
+      // console.log("rate", rate);
+
       if (!rate) {
         return res.status(404).json({
           status: 404,
@@ -699,41 +688,74 @@ const CreateExitRecord = async (req, res) => {
           error: "Không tìm thấy mức giá cho loại phương tiện này.",
         });
       }
-
       // Tính toán thời gian gửi xe
-      const timeParking = exitDateTime - entryDateTime; // Thời gian lưu trữ tính bằng milliseconds
+      const timeParking = exitDateTime - entryDateTime; // Thời gian gửi xe tính bằng milliseconds
       const hours = timeParking / (1000 * 60 * 60);
       const days = timeParking / (1000 * 60 * 60 * 24);
-      const weeks = timeParking / (1000 * 60 * 60 * 24 * 7);
-      const months = timeParking / (1000 * 60 * 60 * 24 * 30);
-      const years = timeParking / (1000 * 60 * 60 * 24 * 365);
 
       let totalFee = 0;
 
-      // Tính toán phí gửi xe dựa trên thời gian gửi
+      // Hàm kiểm tra qua đêm (2:31 - 4:59)
+      const isOvernight = (entryHour, exitHour) => {
+        return (
+          (entryHour >= 2 && entryHour < 5) || (exitHour >= 2 && exitHour < 5)
+        );
+      };
+
+      // Tính phí theo giờ nếu thời gian gửi xe nhỏ hơn 1 ngày
       if (hours <= 24) {
         const entryHour = entryDateTime.getHours();
         const exitHour = exitDateTime.getHours();
 
-        // Giả sử ban đêm từ 22:00 đến 6:00
-        if (
-          (entryHour >= 22 || entryHour < 6) &&
-          (exitHour >= 22 || exitHour < 6)
-        ) {
-          totalFee = rate.overnight_rate;
-        } else {
-          const preciseHours =
-            (exitDateTime - entryDateTime) / (1000 * 60 * 60); // Tổng số giờ
-          totalFee = Math.ceil(preciseHours) * rate.hourly_rate;
+        // Tính phí gửi xe máy
+        if (vehicleType === "motor") {
+          if (isOvernight(entryHour, exitHour)) {
+            totalFee = 30000; // Qua đêm
+          } else if (entryHour >= 17 || entryHour <= 2) {
+            totalFee = 10000; // Đồng giá từ 17:00 - 2:30
+          } else {
+            if (hours <= 2) {
+              totalFee = 6000; // 2 giờ đầu
+            } else {
+              totalFee = 6000 + Math.ceil(hours - 2) * 1000; // Sau 2 giờ
+            }
+          }
         }
-      } else if (days <= 7) {
-        totalFee = Math.ceil(days) * rate.daily_rate;
-      } else if (weeks <= 4) {
-        totalFee = Math.ceil(weeks) * rate.weekly_rate;
-      } else if (months <= 12) {
-        totalFee = Math.ceil(months) * rate.monthly_rate;
+
+        // Tính phí gửi xe hơi
+        if (vehicleType === "car") {
+          if (isOvernight(entryHour, exitHour)) {
+            totalFee = 200000; // Qua đêm
+          } else if (entryHour >= 17 || entryHour <= 2) {
+            totalFee = 40000; // Đồng giá từ 17:00 - 2:30
+          } else {
+            if (hours <= 2) {
+              totalFee = 30000; // 2 giờ đầu
+            } else {
+              totalFee = 30000 + Math.ceil(hours - 2) * 20000; // Sau 2 giờ
+            }
+          }
+        }
       } else {
-        totalFee = Math.ceil(years) * rate.yearly_rate;
+        if (days <= 7) {
+          totalFee = Math.ceil(days) * rate.daily_rate; // Phí theo ngày
+        } else if (days <= 30) {
+          totalFee = Math.ceil(days / 7) * rate.weekly_rate; // Phí theo tuần
+        } else if (days <= 365) {
+          totalFee = Math.ceil(days / 30) * rate.monthly_rate; // Phí theo tháng
+        } else {
+          totalFee = Math.ceil(days / 365) * rate.yearly_rate; // Phí theo năm
+        }
+      }
+
+      // console.log("Tổng phí gửi xe:", totalFee, "VNĐ");
+
+      if (isNaN(totalFee)) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "Lỗi tính toán phí gửi xe.",
+        });
       }
 
       // Tạo bản ghi giao dịch gửi xe mới
