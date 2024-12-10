@@ -41,7 +41,10 @@ const login = async (req, res) => {
     }
 
     // Tìm người dùng theo username
-    const user = await User.findOne({ username, isDelete: false });
+    const user = await User.findOne({ username, isDelete: false }).populate({
+      path: "rfidCard",
+      select: "_id uuid ",
+    });
     if (!user) {
       return sendResponse("401", "", "Tên đăng nhập không hợp lệ");
     }
@@ -60,7 +63,7 @@ const login = async (req, res) => {
         role: user.role,
       },
       process.env.JWT_ACCESS_KEY, // Mã bí mật JWT từ biến môi trường
-      { expiresIn: "6h" } // Hạn sử dụng của JWT là 1 giờ
+      { expiresIn: "24h" } // Hạn sử dụng của JWT là 1 giờ
     );
 
     // Destructuring sau khi truy cập user._doc, bỏ thuộc tính password
@@ -348,7 +351,7 @@ const UpdateUser = async (req, res) => {
       password,
       email,
       isDelete,
-      rfidCard, // Thêm email
+      rfidCard,
     } = req.body;
 
     // Kiểm tra tính hợp lệ của id
@@ -359,17 +362,8 @@ const UpdateUser = async (req, res) => {
         error: "ID không hợp lệ.",
       });
     }
-    if (!rfidCard || !mongoose.Types.ObjectId.isValid(rfidCard)) {
-      return res.status(400).json({
-        status: 400,
-        data: null,
-        error: "rfidCard không hợp lệ.",
-      });
-    }
-    const rfidCardOb = await RFIDCard.findById(rfidCard);
-    // Tìm người dùng theo id
-    const user = await User.findById(id);
 
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({
         status: 404,
@@ -377,19 +371,33 @@ const UpdateUser = async (req, res) => {
         error: "Không tìm thấy người dùng với ID này.",
       });
     }
-    if (!rfidCardOb) {
-      return res.status(404).json({
-        status: 404,
-        data: null,
-        error: "Không tìm thấy thẻ với ID này.",
-      });
+
+    if (rfidCard) {
+      if (!mongoose.Types.ObjectId.isValid(rfidCard)) {
+        return res.status(400).json({
+          status: 400,
+          data: null,
+          error: "rfidCard không hợp lệ.",
+        });
+      }
+
+      const rfidCardOb = await RFIDCard.findById(rfidCard);
+      if (!rfidCardOb) {
+        return res.status(404).json({
+          status: 404,
+          data: null,
+          error: "Không tìm thấy thẻ với ID này.",
+        });
+      }
+
+      user.rfidCard = rfidCard;
     }
 
-    // Kiểm tra định dạng của các trường khác như username, email, v.v.
+    // Kiểm tra định dạng của các trường khác
     const usernameRegex = /^[a-zA-Z0-9]+$/;
     const passwordRegex = /^\S+$/; // Không chứa khoảng trắng
-    const phoneNumberRegex = /^\d{10,11}$/; // Chỉ chứa 10-11 số
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Kiểm tra định dạng email
+    const phoneNumberRegex = /^\d{10,11}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (username && !usernameRegex.test(username)) {
       return res.status(400).json({
@@ -434,19 +442,18 @@ const UpdateUser = async (req, res) => {
       }
     }
 
-    // Kiểm tra giá trị role
     if (role) {
       const validRoles = ["Admin", "User", "Manager"];
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           status: 400,
           data: null,
-          error: 'Giá trị role phải là "Admin" hoặc "User","Manager".',
+          error: 'Giá trị role phải là "Admin", "User", hoặc "Manager".',
         });
       }
     }
 
-    // Cập nhật các trường cần thiết
+    // Cập nhật thông tin
     user.username = username || user.username;
     user.fullname = fullname || user.fullname;
     user.birthDay = birthDay || user.birthDay;
@@ -455,16 +462,14 @@ const UpdateUser = async (req, res) => {
     user.role = role || user.role;
     user.email = email || user.email;
     user.isDelete = isDelete !== undefined ? isDelete : user.isDelete;
-    user.rfidCard = rfidCard || user.rfidCard;
 
-    // Nếu có mật khẩu mới, mã hóa mật khẩu
+    // Mã hóa và cập nhật mật khẩu nếu có
     if (password) {
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      user.password = hashedPassword;
+      user.password = await bcrypt.hash(password, salt);
     }
 
-    // Lưu lại bản ghi đã cập nhật
+    // Lưu người dùng sau khi cập nhật
     await user.save();
 
     // Trả về thông tin người dùng đã cập nhật mà không có password
@@ -589,6 +594,54 @@ const GetUserByRFIDCard = async (req, res) => {
     });
   }
 };
+const checkPassword = async (req, res) => {
+  try {
+    const { userName, password } = req.body;
+
+    // Kiểm tra input có hợp lệ không
+    if (!userName || !password) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu tên đăng nhập hoặc mật khẩu.",
+      });
+    }
+
+    // Tìm người dùng theo userName
+    const user = await User.findOne({ username: userName });
+
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy người dùng với tên đăng nhập này.",
+      });
+    }
+
+    // Kiểm tra mật khẩu
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        status: 401,
+        data: null,
+        error: "Mật khẩu không chính xác.",
+      });
+    }
+
+    return res.status(200).json({
+      status: 200,
+      data: "Mật khẩu chính xác.",
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong checkPassword:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 
 module.exports = {
   login,
@@ -597,5 +650,6 @@ module.exports = {
   GetAllUsersNonDelete,
   UpdateUser,
   DeleteUsers,
-  GetUserByRFIDCard, // Thêm hàm deleteUsers vào module export
+  GetUserByRFIDCard,
+  checkPassword, // Thêm hàm deleteUsers vào module export
 };
