@@ -35,6 +35,7 @@ const TimeKeepingLogRoute = require("./routes/TimeKeepingLogRoute");
 const TimeKeepingRoute = require("./routes/TimeKeepingRoute");
 const PayRollRoute = require("./routes/PayRollRoute");
 const PayRollFomulaRoute = require("./routes/PayRollFomulaRoute");
+const OtpRoute = require("./routes/OtpRoute");  
 
 const corsOptions = {
   origin: "http://localhost:3000", // Nguồn được phép
@@ -79,6 +80,7 @@ app.use("/api/v1/timeKeepingLog", TimeKeepingLogRoute);
 app.use("/api/v1/timeKeeping", TimeKeepingRoute);
 app.use("/api/v1/payRoll", PayRollRoute);
 app.use("/api/v1/payRollFomula", PayRollFomulaRoute);
+app.use("/api/v1/otp", OtpRoute);
 
 app.use(function (req, res) {
   res.status(404).send("Not found");
