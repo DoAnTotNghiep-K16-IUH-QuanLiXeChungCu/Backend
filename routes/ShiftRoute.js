@@ -1,5 +1,5 @@
 const { Router } = require("express");
-const ShiftController = require("../controllers/shiftController");
+const ShiftController = require("../controllers/ShiftController");
 const middleware = require("../middleware/middlewareController");
 const router = Router();
 
