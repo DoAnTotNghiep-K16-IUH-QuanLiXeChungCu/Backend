@@ -243,10 +243,45 @@ const GetAvailableParkingSlotsByTypeAndCode = async (req, res) => {
   }
 };
 
+
+const CountAvailableSlots = async (req, res) => {
+  try {
+    const availableSlots = await ParkingSlot.aggregate([
+      {
+        $group: {
+          _id: "$slotType",
+          available: { $sum: "$availableSlots" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          slotType: "$_id",
+          available: 1,
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      status: 200,
+      data: availableSlots,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Error in CountAvailableSlots:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Internal server error.",
+    });
+  }
+};
+
 module.exports = {
   GetAllParkingSlots,
   GetParkingSlotById,
   CreateParkingSlot,
   GetAvailableParkingSlotsByType,
-  GetAvailableParkingSlotsByTypeAndCode
+  GetAvailableParkingSlotsByTypeAndCode,
+  CountAvailableSlots
 };

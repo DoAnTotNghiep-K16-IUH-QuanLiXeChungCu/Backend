@@ -18,5 +18,8 @@ router.patch("/GetAvailableParkingSlotsByType", middleware.verifyToken , Parking
 // http://localhost:3000/api/v1/parkingSlot/GetAvailableParkingSlotsByTypeAndCode
 router.patch("/GetAvailableParkingSlotsByTypeAndCode", middleware.verifyToken , ParkingSlotController.GetAvailableParkingSlotsByTypeAndCode);
 
+// http://localhost:3000/api/v1/parkingSlot/CountAvailableSlots
+router.patch("/CountAvailableSlots", middleware.verifyToken , ParkingSlotController.CountAvailableSlots);
+
 // Đảm bảo bạn export router đúng cách
 module.exports = router;
