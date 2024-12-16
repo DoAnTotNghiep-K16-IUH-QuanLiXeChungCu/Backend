@@ -44,4 +44,4 @@ router.patch("/FindUserByEmail", UserController.findUserByEmail);
 router.put("/ResetPassword", UserController.ResetPassword);
 
 // API
-module.exports = router;
+module.exports = router;   
