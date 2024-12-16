@@ -35,7 +35,7 @@ const TimeKeepingLogRoute = require("./routes/TimeKeepingLogRoute");
 const TimeKeepingRoute = require("./routes/TimeKeepingRoute");
 const PayRollRoute = require("./routes/PayRollRoute");
 const PayRollFomulaRoute = require("./routes/PayRollFomulaRoute");
-const OtpRoute = require("./routes/OtpRoute");  
+const OtpRoute = require("./routes/OtpRoute");
 
 const corsOptions = {
   origin: "http://localhost:3000", // Nguồn được phép

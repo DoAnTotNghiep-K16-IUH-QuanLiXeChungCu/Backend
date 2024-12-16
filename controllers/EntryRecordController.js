@@ -698,13 +698,13 @@ const CreateEntryRecord = async (req, res) => {
         const endDate = new Date(residentHistory.endDate);
         const currentDate = new Date();
 
-        if (endDate < currentDate) {
-          return res.status(400).json({
-            status: 400,
-            data: null,
-            error: "Hết hạn đăng ký tháng, không thể đăng nhập xe cư dân.",
-          });
-        }
+        // if (endDate < currentDate) {
+        //   return res.status(400).json({
+        //     status: 400,
+        //     data: null,
+        //     error: "Hết hạn đăng ký tháng, không thể đăng nhập xe cư dân.",
+        //   });
+        // }
         isResident = true;
       } else {
         isResident = false;

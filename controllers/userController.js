@@ -95,6 +95,9 @@ const signup = async (req, res) => {
       error: "Các trường username, password, phoneNumber và email là bắt buộc.",
     });
   }
+  if (birthDay && isNaN(new Date(birthDay))) {
+    console.log("Ngày sinh không hợp lệ");
+  }
 
   // Regex để kiểm tra các định dạng
   const usernameRegex = /^[a-zA-Z0-9]+$/; // Username không dấu và không ký tự đặc biệt
@@ -499,8 +502,6 @@ const DeleteUsers = async (req, res) => {
   try {
     const { id } = req.body;
 
-    console.log("id ", id);
-
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         status: 400,
@@ -565,10 +566,12 @@ const GetUserByRFIDCard = async (req, res) => {
     // Tìm người dùng dựa trên rfidCard đã tìm được
     const userFinded = await User.findOne({
       rfidCard: rfidCardIdString,
-    }).populate({
-      path: "rfidCard",
-      select: "_id uuid",
-    });
+    })
+      .select("-password")
+      .populate({
+        path: "rfidCard",
+        select: "_id uuid",
+      });
 
     // Kiểm tra nếu không tìm thấy người dùng nào
     if (!userFinded) {
@@ -642,7 +645,113 @@ const checkPassword = async (req, res) => {
     });
   }
 };
+const findUserByEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
 
+    // Kiểm tra input có hợp lệ không
+    if (!email) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Thiếu tên đăng nhập hoặc mật khẩu.",
+      });
+    }
+
+    // Tìm người dùng theo userName
+    const user = await User.findOne({ email: email })
+      .select("-password")
+      .populate({
+        path: "rfidCard",
+        select: "_id uuid",
+      });
+
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy người dùng với tên đăng nhập này.",
+      });
+    }
+    return res.status(200).json({
+      status: 200,
+      data: user,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong tìm user bằng email:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
+const ResetPassword = async (req, res) => {
+  try {
+    const { id, username, password } = req.body;
+
+    // Kiểm tra tính hợp lệ của id
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "ID không hợp lệ.",
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        data: null,
+        error: "Không tìm thấy người dùng với ID này.",
+      });
+    }
+
+    const passwordRegex = /^\S+$/; // Không chứa khoảng trắng
+
+    if (password && !passwordRegex.test(password)) {
+      return res.status(400).json({
+        status: 400,
+        data: null,
+        error: "Mật khẩu không được chứa khoảng trắng.",
+      });
+    }
+
+    // Cập nhật thông tin
+    user.username = username || user.username;
+    // Mã hóa và cập nhật mật khẩu nếu có
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    // Lưu người dùng sau khi cập nhật
+    await user.save();
+
+    // Trả về thông tin người dùng đã cập nhật mà không có password
+    const userWithoutPassword = await User.findById(id)
+      .select("-password")
+      .populate({
+        path: "rfidCard",
+        select: "_id uuid",
+      });
+
+    return res.status(200).json({
+      status: 200,
+      data: userWithoutPassword,
+      error: null,
+    });
+  } catch (error) {
+    console.error("Lỗi trong UpdateUser:", error);
+    return res.status(500).json({
+      status: 500,
+      data: null,
+      error: "Lỗi máy chủ không xác định.",
+    });
+  }
+};
 module.exports = {
   login,
   signup,
@@ -651,5 +760,7 @@ module.exports = {
   UpdateUser,
   DeleteUsers,
   GetUserByRFIDCard,
-  checkPassword, // Thêm hàm deleteUsers vào module export
+  checkPassword,
+  findUserByEmail,
+  ResetPassword,
 };
