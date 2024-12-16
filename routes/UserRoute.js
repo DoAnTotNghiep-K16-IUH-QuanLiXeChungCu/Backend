@@ -39,6 +39,9 @@ router.post(
   middleware.verifyToken,
   UserController.checkPassword
 );
+router.patch("/FindUserByEmail", UserController.findUserByEmail);
+// http://localhost:3000/api/v1/users/UpdateUser
+router.put("/ResetPassword", UserController.ResetPassword);
 
 // API
 module.exports = router;   
