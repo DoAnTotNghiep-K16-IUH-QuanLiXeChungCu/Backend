@@ -87,8 +87,13 @@ app.use(function (req, res) {
 });
 
 // Bắt đầu server và lắng nghe các kết nối tới
-server.listen(port, ip, () => {
-  console.log("Server is running on IP: " + ip);
-  console.log("Server is running on PORT: " + port);
-  console.log("Server is running on DB: " + mongodb);
+// server.listen(port, ip, () => {
+//   console.log("Server is running on IP: " + ip);
+//   console.log("Server is running on PORT: " + port);
+//   console.log("Server is running on DB: " + mongodb);
+// });
+
+
+server.listen(port, '0.0.0.0', () => {
+  console.log(`Server is running on PORT: ${port}`);
 });
